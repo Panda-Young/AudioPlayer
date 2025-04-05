@@ -327,7 +327,11 @@ class MainActivity : AppCompatActivity() {
                     pausePlayback()
                 } else {
                     if (currentIndex != -1) {
-                        playAudioFile(currentPlaylist[currentIndex])
+                        player.seekTo(seekBar.progress)
+                        player.start()
+                        isPlaying = true
+                        playPauseButton.setImageResource(R.drawable.ic_pause)
+                        startUpdatingSeekBar()
                     } else {
                         Logger.logd("No audio file selected")
                     }
@@ -464,6 +468,7 @@ class MainActivity : AppCompatActivity() {
                 player.reset()
                 player.setDataSource(file.absolutePath)
                 player.prepare()
+                player.seekTo(0)
                 player.start()
                 isPlaying = true
                 playPauseButton.setImageResource(R.drawable.ic_pause)
@@ -518,6 +523,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     setDataSource(file.absolutePath)
                     prepare()
+                    seekTo(0)
                     start()
                     this@MainActivity.isPlaying = true
                     playPauseButton.setImageResource(R.drawable.ic_pause)
