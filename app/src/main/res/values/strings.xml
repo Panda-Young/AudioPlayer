@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">AudioPlayer</string>
+    <string name="audio_cover">Audio Cover</string>
+    <string name="audio_title">Audio Title</string>
+    <string name="audio_artist">Audio Artist</string>
+    <string name="loop">Loop</string>
+    <string name="prev">Prev</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="next">Next</string>
+    <string name="playlist">Playlist</string>
 </resources>
