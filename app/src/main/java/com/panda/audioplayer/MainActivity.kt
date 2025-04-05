@@ -226,39 +226,37 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playAudioFile(file: File) {
-        if (mediaPlayer == null) {
+        mediaPlayer?.let {
+            try {
+                if (it.isPlaying || isPlaying) {
+                    it.stop()
+                }
+                it.reset()
+                it.setDataSource(file.absolutePath)
+                it.prepare()
+                it.start()
+                isPlaying = true
+                playPauseButton.setImageResource(R.drawable.ic_pause)
+                audioTitle.text = file.name
+                val artistName = getArtistName(file)
+                audioArtist.text = artistName
+                audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
+            } catch (e: IOException) {
+                e.printStackTrace()
+                isPlaying = false
+                playPauseButton.setImageResource(R.drawable.ic_play)
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Playback Error")
+                    .setMessage("Failed to play the audio file.")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        } ?: run {
             mediaPlayer = MediaPlayer().apply {
                 try {
                     setDataSource(file.absolutePath)
                     prepare()
                     start()
-                    this@MainActivity.isPlaying = true
-                    playPauseButton.setImageResource(R.drawable.ic_pause)
-                    audioTitle.text = file.name
-                    val artistName = getArtistName(file)
-                    audioArtist.text = artistName
-                    audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                    this@MainActivity.isPlaying = false
-                    playPauseButton.setImageResource(R.drawable.ic_play)
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Playback Error")
-                        .setMessage("Failed to play the audio file.")
-                        .setPositiveButton("OK", null)
-                        .show()
-                }
-            }
-        } else {
-            mediaPlayer?.let {
-                try {
-                    if (it.isPlaying) {
-                        it.stop()
-                        it.reset()
-                    }
-                    it.setDataSource(file.absolutePath)
-                    it.prepare()
-                    it.start()
                     this@MainActivity.isPlaying = true
                     playPauseButton.setImageResource(R.drawable.ic_pause)
                     audioTitle.text = file.name
