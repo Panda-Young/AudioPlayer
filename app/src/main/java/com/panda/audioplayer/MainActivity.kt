@@ -32,15 +32,19 @@ import android.util.Log
 object Logger {
     private const val TAG = "AudioPlayer"
 
-    fun log(message: String) {
+    private fun getLogPrefix(): String {
         val stackTrace = Thread.currentThread().stackTrace
-        val element = stackTrace[3]
-        val fileName = element.fileName
+        val element = stackTrace[4]
+        val fileName = element.fileName ?: "UnknownFile"
         val lineNumber = element.lineNumber
         val methodName = element.methodName
-
-        Log.d(TAG, "$message - $fileName:$lineNumber @$methodName")
+        return "$fileName:$lineNumber @$methodName".padEnd(50, ' ')
     }
+
+    fun logd(message: String) {Log.d(TAG, "${getLogPrefix()} $message")}
+    fun logi(message: String) {Log.i(TAG, "${getLogPrefix()} $message")}
+    fun logw(message: String) {Log.w(TAG, "${getLogPrefix()} $message")}
+    fun loge(message: String) {Log.e(TAG, "${getLogPrefix()} $message")}
 }
 
 class MainActivity : AppCompatActivity() {
@@ -66,6 +70,13 @@ class MainActivity : AppCompatActivity() {
     private var currentPlaylist: MutableList<File> = mutableListOf()
     private var currentIndex: Int = -1
     private var unplayedSongs: MutableList<File> = mutableListOf()
+    companion object {
+        private val EXCLUDED_PATHS = listOf(
+            "/storage/emulated/0/Music/ringtone",
+            "/storage/emulated/0/Music/notifications",
+            "/storage/emulated/0/Music/alarms"
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,18 +91,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkAndRequestPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            Logger.log("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
+            Logger.logi("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), requestCodeReadExternalStorage )
         } else {
-            Logger.log("READ_EXTERNAL_STORAGE permission already granted")
+            Logger.logi("READ_EXTERNAL_STORAGE permission already granted")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (!Environment.isExternalStorageManager()) {
-                    Logger.log("MANAGE_EXTERNAL_STORAGE permission not granted")
+                    Logger.logw("MANAGE_EXTERNAL_STORAGE permission not granted")
                     val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
                     intent.data = "package:${packageName}".toUri()
                     startActivity(intent)
                 } else {
-                    Logger.log("MANAGE_EXTERNAL_STORAGE permission granted")
+                    Logger.logi("MANAGE_EXTERNAL_STORAGE permission granted")
                     scanAllLocalFiles()
                     playFirstAudioFileIfAvailable()
                 }
@@ -106,10 +117,10 @@ class MainActivity : AppCompatActivity() {
         currentPlaylist = scanAllLocalFiles()
         if (currentPlaylist.isNotEmpty()) {
             if (!::audioTitle.isInitialized) {
-                Logger.log("audioTitle is not initialized")
+                Logger.logw("audioTitle is not initialized")
                 return
             }
-            Logger.log("Playing first audio file")
+            Logger.logi("Playing first audio file")
             val firstFile = currentPlaylist[0]
             updateUIForSelectedFile(firstFile)
             currentIndex = 0
@@ -123,11 +134,11 @@ class MainActivity : AppCompatActivity() {
                     startUpdatingSeekBar()
                 } catch (e: IOException) {
                     e.printStackTrace()
-                    Logger.log("Failed to initialize mediaPlayer for first file")
+                    Logger.loge("Failed to initialize mediaPlayer for first file")
                 }
             }
         } else {
-            Logger.log("No audio files found")
+            Logger.logw("No audio files found")
         }
     }
 
@@ -183,10 +194,10 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == requestCodeReadExternalStorage ) {
             if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                Logger.log("READ_EXTERNAL_STORAGE permission granted")
+                Logger.logd("READ_EXTERNAL_STORAGE permission granted")
                 checkAndRequestPermissions()
             } else {
-                Logger.log("READ_EXTERNAL_STORAGE permission denied")
+                Logger.logd("READ_EXTERNAL_STORAGE permission denied")
                 showPermissionDeniedDialog()
             }
         }
@@ -205,17 +216,20 @@ class MainActivity : AppCompatActivity() {
             for (path in audioPaths) {
                 val directory = File(path)
                 if (directory.exists() && directory.isDirectory) {
-                    listAudioFilesRecursively(directory, audioFiles)
+                    listAudioFilesRecursively(directory, audioFiles, EXCLUDED_PATHS)
                 }
             }
             audioFiles
         }
     }
 
-    private fun listAudioFilesRecursively(directory: File, audioFiles: MutableList<File>) {
+    private fun listAudioFilesRecursively(directory: File, audioFiles: MutableList<File>, excludedPaths: List<String>) {
+        if (excludedPaths.contains(directory.absolutePath)) {
+            return
+        }
         directory.listFiles()?.forEach { file ->
             if (file.isDirectory) {
-                listAudioFilesRecursively(file, audioFiles)
+                listAudioFilesRecursively(file, audioFiles, excludedPaths)
             } else if (file.isFile && isAudioFile(file)) {
                 audioFiles.add(file)
             }
@@ -241,15 +255,21 @@ class MainActivity : AppCompatActivity() {
             val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
             while (cursor.moveToNext()) {
                 val filePath = cursor.getString(dataColumn)
-                val file = File(filePath)
-                if (file.exists()) {
-                    Logger.log("Found audio file: ${file.absolutePath}")
-                    audioFiles.add(file)
+                if (!isPathExcluded(filePath)) {
+                    val file = File(filePath)
+                    if (file.exists()) {
+                        Logger.logd("Found audio file: ${file.absolutePath}")
+                        audioFiles.add(file)
+                    }
                 }
             }
         }
 
         return audioFiles
+    }
+
+    private fun isPathExcluded(filePath: String): Boolean {
+        return EXCLUDED_PATHS.any { filePath.startsWith(it) }
     }
 
     private fun isAudioFile(file: File): Boolean {
@@ -281,7 +301,7 @@ class MainActivity : AppCompatActivity() {
                     if (currentIndex != -1) {
                         playAudioFile(currentPlaylist[currentIndex])
                     } else {
-                        Logger.log("No audio file selected")
+                        Logger.logd("No audio file selected")
                     }
                 }
             }
@@ -289,7 +309,7 @@ class MainActivity : AppCompatActivity() {
             if (currentIndex != -1) {
                 playAudioFile(currentPlaylist[currentIndex])
             } else {
-                Logger.log("No audio file selected")
+                Logger.logd("No audio file selected")
             }
         }
     }
@@ -437,7 +457,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                Logger.log("Playing audio file: ${file.name}")
+                Logger.logi("Playing audio file: ${file.name}")
             } catch (e: IOException) {
                 e.printStackTrace()
                 isPlaying = false
@@ -447,7 +467,7 @@ class MainActivity : AppCompatActivity() {
                     .setMessage("Failed to play the audio file.")
                     .setPositiveButton("OK", null)
                     .show()
-                Logger.log("Failed to play audio file: ${file.name}")
+                Logger.loge("Failed to play audio file: ${file.name}")
             }
         } ?: run {
             mediaPlayer = MediaPlayer().apply {
@@ -489,7 +509,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
-                    Logger.log("Playing audio file: ${file.name}")
+                    Logger.logi("Playing audio file: ${file.name}")
                 } catch (e: IOException) {
                     e.printStackTrace()
                     this@MainActivity.isPlaying = false
@@ -499,7 +519,7 @@ class MainActivity : AppCompatActivity() {
                         .setMessage("Failed to play the audio file.")
                         .setPositiveButton("OK", null)
                         .show()
-                    Logger.log("Failed to play audio file: ${file.name}")
+                    Logger.loge("Failed to play audio file: ${file.name}")
                 }
             }
         }
