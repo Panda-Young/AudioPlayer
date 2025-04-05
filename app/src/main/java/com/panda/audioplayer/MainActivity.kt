@@ -62,6 +62,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var audioCover: ImageView
     private lateinit var currentTime: TextView
     private lateinit var totalTime: TextView
+    private var cachedAudioFiles: MutableList<File>? = null
 
     private var mediaPlayer: MediaPlayer? = null
     private var isPlaying: Boolean = false
@@ -204,22 +205,31 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SdCardPath")
     private fun scanAllLocalFiles(): MutableList<File> {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            queryAudioFiles().toMutableList()
-        } else {
-            val audioPaths = listOf(
-                Environment.getExternalStorageDirectory().absolutePath + "/Music/",
-                Environment.getExternalStorageDirectory().absolutePath + "/Download/"
-            )
-            val audioFiles = mutableListOf<File>()
-            for (path in audioPaths) {
-                val directory = File(path)
-                if (directory.exists() && directory.isDirectory) {
-                    listAudioFilesRecursively(directory, audioFiles, EXCLUDED_PATHS)
+        return cachedAudioFiles ?: run {
+            val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                queryAudioFiles().toMutableList()
+            } else {
+                val audioPaths = listOf(
+                    Environment.getExternalStorageDirectory().absolutePath + "/Music/",
+                    Environment.getExternalStorageDirectory().absolutePath + "/Download/"
+                )
+                val audioFiles = mutableListOf<File>()
+                for (path in audioPaths) {
+                    val directory = File(path)
+                    if (directory.exists() && directory.isDirectory) {
+                        listAudioFilesRecursively(directory, audioFiles, EXCLUDED_PATHS)
+                    }
                 }
+                audioFiles
             }
-            audioFiles
+            cachedAudioFiles = result
+            result
         }
+    }
+
+    private fun refreshAudioFiles() {
+        cachedAudioFiles = null
+        scanAllLocalFiles()
     }
 
     private fun listAudioFilesRecursively(directory: File, audioFiles: MutableList<File>, excludedPaths: List<String>) {
@@ -384,6 +394,8 @@ class MainActivity : AppCompatActivity() {
                 val audioFileName = view.findViewById<TextView>(R.id.audioFileName)
                 val removeIcon = view.findViewById<ImageView>(R.id.removeIcon)
                 val file = audioFiles[position]
+                audioFileName.text = file.name
+
                 if (currentIndex != -1 && file == currentPlaylist[currentIndex]) {
                     audioFileName.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.highlight_color))
                 } else {
@@ -417,7 +429,7 @@ class MainActivity : AppCompatActivity() {
                 currentIndex = which
             }
             .setNeutralButton("Rescan") { _, _ ->
-                currentPlaylist = scanAllLocalFiles()
+                refreshAudioFiles()
                 openPlaylist()
             }
             .setNegativeButton("Cancel", null)
