@@ -40,21 +40,46 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        initializeUIComponents()
         checkPermissions()
 
-        initializeUIComponents()
-
         setButtonListeners()
-
         setSeekBarListener()
     }
 
     private fun checkPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            println("Permission not granted, requesting permission")
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
         } else {
+            println("Permission already granted")
             readAudioFiles()
+            playFirstAudioFileIfAvailable()
         }
+    }
+
+    private fun playFirstAudioFileIfAvailable() {
+        currentPlaylist = readAudioFiles()
+        if (currentPlaylist.isNotEmpty()) {
+            if (!::audioTitle.isInitialized) {
+                println("audioTitle is not initialized")
+                return
+            }
+            println("Playing first audio file")
+            val firstFile = currentPlaylist[0]
+            updateUIForSelectedFile(firstFile)
+            currentIndex = 0
+        } else {
+            println("No audio files found")
+        }
+    }
+
+    private fun updateUIForSelectedFile(file: File) {
+        audioTitle.text = file.name
+        val artistName = getArtistName(file)
+        audioArtist.text = artistName
+        audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
+        playPauseButton.setImageResource(R.drawable.ic_play)
     }
 
     private fun initializeUIComponents() {
@@ -99,8 +124,11 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_READ_EXTERNAL_STORAGE) {
             if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                println("Permission granted, reading audio files")
                 readAudioFiles()
+                playFirstAudioFileIfAvailable()
             } else {
+                println("Permission denied")
                 showPermissionDeniedDialog()
             }
         }
@@ -122,6 +150,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        println("Read ${audioFiles.size} audio files")
         return audioFiles
     }
 
@@ -154,15 +183,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun togglePlayPause() {
-        mediaPlayer?.let {
+        mediaPlayer?.let { player ->
             if (isPlaying) {
                 pausePlayback()
             } else {
-                if (it.isPlaying) {
+                if (player.isPlaying) {
                     pausePlayback()
                 } else {
-                    startPlayback()
+                    if (currentIndex != -1) {
+                        playAudioFile(currentPlaylist[currentIndex])
+                    } else {
+                        println("No audio file selected")
+                    }
                 }
+            }
+        } ?: run {
+            if (currentIndex != -1) {
+                playAudioFile(currentPlaylist[currentIndex])
+            } else {
+                println("No audio file selected")
             }
         }
     }
@@ -226,21 +265,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playAudioFile(file: File) {
-        mediaPlayer?.let {
+        mediaPlayer?.let { player ->
             try {
-                if (it.isPlaying || isPlaying) {
-                    it.stop()
+                if (player.isPlaying || isPlaying) {
+                    player.stop()
                 }
-                it.reset()
-                it.setDataSource(file.absolutePath)
-                it.prepare()
-                it.start()
+                player.reset()
+                player.setDataSource(file.absolutePath)
+                player.prepare()
+                player.start()
                 isPlaying = true
                 playPauseButton.setImageResource(R.drawable.ic_pause)
                 audioTitle.text = file.name
                 val artistName = getArtistName(file)
                 audioArtist.text = artistName
                 audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
+                println("Playing audio file: ${file.name}")
             } catch (e: IOException) {
                 e.printStackTrace()
                 isPlaying = false
@@ -250,6 +290,7 @@ class MainActivity : AppCompatActivity() {
                     .setMessage("Failed to play the audio file.")
                     .setPositiveButton("OK", null)
                     .show()
+                println("Failed to play audio file: ${file.name}")
             }
         } ?: run {
             mediaPlayer = MediaPlayer().apply {
@@ -263,6 +304,7 @@ class MainActivity : AppCompatActivity() {
                     val artistName = getArtistName(file)
                     audioArtist.text = artistName
                     audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
+                    println("Playing audio file: ${file.name}")
                 } catch (e: IOException) {
                     e.printStackTrace()
                     this@MainActivity.isPlaying = false
@@ -272,6 +314,7 @@ class MainActivity : AppCompatActivity() {
                         .setMessage("Failed to play the audio file.")
                         .setPositiveButton("OK", null)
                         .show()
+                    println("Failed to play audio file: ${file.name}")
                 }
             }
         }
@@ -312,9 +355,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun pausePlayback() {
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.pause()
+        mediaPlayer?.let { player ->
+            if (player.isPlaying) {
+                player.pause()
                 isPlaying = false
                 playPauseButton.setImageResource(R.drawable.ic_play)
             }
