@@ -357,9 +357,27 @@ class MainActivity : AppCompatActivity() {
     private fun playNext() {
         if (currentPlaylist.isEmpty() || currentIndex == -1) return
 
-        val nextIndex = if (currentIndex == currentPlaylist.size - 1) 0 else currentIndex + 1
-        playAudioFile(currentPlaylist[nextIndex])
-        currentIndex = nextIndex
+        when (loopMode) {
+            LoopMode.LOOP_SINGLE, LoopMode.LOOP_LIST -> {
+                val nextIndex = if (currentIndex == currentPlaylist.size - 1) 0 else currentIndex + 1
+                playAudioFile(currentPlaylist[nextIndex])
+                currentIndex = nextIndex
+            }
+            LoopMode.LOOP_SHUFFLE -> {
+                if (unplayedSongs.isNotEmpty()) {
+                    val nextFile = unplayedSongs.random()
+                    unplayedSongs.remove(nextFile)
+                    playAudioFile(nextFile)
+                    currentIndex = currentPlaylist.indexOf(nextFile)
+                } else {
+                    unplayedSongs = currentPlaylist.toMutableList()
+                    val nextFile = unplayedSongs.random()
+                    unplayedSongs.remove(nextFile)
+                    playAudioFile(nextFile)
+                    currentIndex = currentPlaylist.indexOf(nextFile)
+                }
+            }
+        }
     }
 
     private fun setLoopMode(mode: LoopMode) {
