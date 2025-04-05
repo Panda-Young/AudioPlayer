@@ -17,6 +17,12 @@ import java.io.File
 import java.io.IOException
 import android.os.Handler
 import android.os.Looper
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.provider.MediaStore
+import android.os.Build
+import android.os.Environment
 
 class MainActivity : AppCompatActivity() {
 
@@ -47,20 +53,33 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         initializeUIComponents()
-        checkPermissions()
+        checkAndRequestPermissions()
 
         setButtonListeners()
         setSeekBarListener()
     }
 
-    private fun checkPermissions() {
+    private fun checkAndRequestPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            println("Permission not granted, requesting permission")
+            println("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
         } else {
-            println("Permission already granted")
-            readAudioFiles()
-            playFirstAudioFileIfAvailable()
+            println("READ_EXTERNAL_STORAGE permission already granted")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (!Environment.isExternalStorageManager()) {
+                    println("MANAGE_EXTERNAL_STORAGE permission not granted")
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    intent.data = Uri.parse("package:${packageName}")
+                    startActivity(intent)
+                } else {
+                    println("MANAGE_EXTERNAL_STORAGE permission granted")
+                    readAudioFiles()
+                    playFirstAudioFileIfAvailable()
+                }
+            } else {
+                readAudioFiles()
+                playFirstAudioFileIfAvailable()
+            }
         }
     }
 
@@ -132,11 +151,10 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_READ_EXTERNAL_STORAGE) {
             if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                println("Permission granted, reading audio files")
-                readAudioFiles()
-                playFirstAudioFileIfAvailable()
+                println("READ_EXTERNAL_STORAGE permission granted")
+                checkAndRequestPermissions()
             } else {
-                println("Permission denied")
+                println("READ_EXTERNAL_STORAGE permission denied")
                 showPermissionDeniedDialog()
             }
         }
@@ -144,21 +162,23 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SdCardPath")
     private fun readAudioFiles(): List<File> {
-        val audioPaths = listOf(
-            "/sdcard/Music/",
-            "/sdcard/Download/"
-        )
-
-        val audioFiles = mutableListOf<File>()
-        for (path in audioPaths) {
-            val directory = File(path)
-            if (directory.exists() && directory.isDirectory) {
-                listAudioFilesRecursively(directory, audioFiles)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            queryAudioFiles()
+        } else {
+            // old version Android 10 and below to directly access the audio files
+            val audioPaths = listOf(
+                Environment.getExternalStorageDirectory().absolutePath + "/Music/",
+                Environment.getExternalStorageDirectory().absolutePath + "/Download/"
+            )
+            val audioFiles = mutableListOf<File>()
+            for (path in audioPaths) {
+                val directory = File(path)
+                if (directory.exists() && directory.isDirectory) {
+                    listAudioFilesRecursively(directory, audioFiles)
+                }
             }
+            audioFiles
         }
-
-        println("Read ${audioFiles.size} audio files")
-        return audioFiles
     }
 
     private fun listAudioFilesRecursively(directory: File, audioFiles: MutableList<File>) {
@@ -169,6 +189,36 @@ class MainActivity : AppCompatActivity() {
                 audioFiles.add(file)
             }
         }
+    }
+
+    private fun queryAudioFiles(): List<File> {
+        val audioFiles = mutableListOf<File>()
+        val projection = arrayOf(
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.DISPLAY_NAME
+        )
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        val sortOrder = "${MediaStore.Audio.Media.DISPLAY_NAME} ASC"
+
+        contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            null,
+            sortOrder
+        )?.use { cursor ->
+            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            while (cursor.moveToNext()) {
+                val filePath = cursor.getString(dataColumn)
+                val file = File(filePath)
+                if (file.exists()) {
+                    println("Found audio file: ${file.absolutePath}")
+                    audioFiles.add(file)
+                }
+            }
+        }
+
+        return audioFiles
     }
 
     private fun isAudioFile(file: File): Boolean {
