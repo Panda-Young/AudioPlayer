@@ -75,7 +75,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_weight="1"
-                android:src="@drawable/ic_loop"
+                android:src="@drawable/ic_list_loop"
                 android:contentDescription="@string/loop" />
 
             <ImageView

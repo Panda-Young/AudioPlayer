@@ -34,9 +34,10 @@ class MainActivity : AppCompatActivity() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var isPlaying: Boolean = false
-    private var loopMode: LoopMode = LoopMode.NO_LOOP
+    private var loopMode: LoopMode = LoopMode.LOOP_LIST
     private var currentPlaylist: List<File> = emptyList()
     private var currentIndex: Int = -1
+    private var unplayedSongs: MutableList<File> = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -224,19 +225,38 @@ class MainActivity : AppCompatActivity() {
         currentIndex = nextIndex
     }
 
-    private fun toggleLoopMode() {
+    private fun setLoopMode(mode: LoopMode) {
+        loopMode = mode
         when (loopMode) {
-            LoopMode.NO_LOOP -> {
-                setLoopMode(LoopMode.LOOP_SINGLE)
+            LoopMode.LOOP_SINGLE -> {
+                mediaPlayer?.isLooping = true
                 loopButton.setImageResource(R.drawable.ic_single_loop)
             }
+            LoopMode.LOOP_LIST -> {
+                mediaPlayer?.isLooping = false
+                loopButton.setImageResource(R.drawable.ic_list_loop)
+            }
+            LoopMode.LOOP_SHUFFLE -> {
+                mediaPlayer?.isLooping = false
+                loopButton.setImageResource(R.drawable.ic_shuffle)
+                unplayedSongs = currentPlaylist.toMutableList()
+            }
+        }
+    }
+
+    private fun toggleLoopMode() {
+        when (loopMode) {
             LoopMode.LOOP_SINGLE -> {
+                setLoopMode(LoopMode.LOOP_LIST)
+                loopButton.setImageResource(R.drawable.ic_list_loop)
+            }
+            LoopMode.LOOP_LIST -> {
                 setLoopMode(LoopMode.LOOP_SHUFFLE)
                 loopButton.setImageResource(R.drawable.ic_shuffle)
             }
             LoopMode.LOOP_SHUFFLE -> {
-                setLoopMode(LoopMode.NO_LOOP)
-                loopButton.setImageResource(R.drawable.ic_loop)
+                setLoopMode(LoopMode.LOOP_SINGLE)
+                loopButton.setImageResource(R.drawable.ic_single_loop)
             }
         }
     }
@@ -285,8 +305,27 @@ class MainActivity : AppCompatActivity() {
                 seekBar.max = player.duration
 
                 player.setOnCompletionListener {
-                    isPlaying = false
-                    playPauseButton.setImageResource(R.drawable.ic_play)
+                    when (loopMode) {
+                        LoopMode.LOOP_SINGLE -> {
+                            player.seekTo(0)
+                            player.start()
+                        }
+                        LoopMode.LOOP_LIST -> {
+                            playNext()
+                        }
+                        LoopMode.LOOP_SHUFFLE -> {
+                            if (unplayedSongs.isNotEmpty()) {
+                                unplayedSongs.remove(file)
+                                if (unplayedSongs.isNotEmpty()) {
+                                    val nextFile = unplayedSongs.random()
+                                    playAudioFile(nextFile)
+                                } else {
+                                    unplayedSongs = currentPlaylist.toMutableList()
+                                    playAudioFile(unplayedSongs.random())
+                                }
+                            }
+                        }
+                    }
                 }
 
                 println("Playing audio file: ${file.name}")
@@ -316,8 +355,27 @@ class MainActivity : AppCompatActivity() {
                     seekBar.max = this.duration
 
                     setOnCompletionListener {
-                        this@MainActivity.isPlaying = false
-                        playPauseButton.setImageResource(R.drawable.ic_play)
+                        when (loopMode) {
+                            LoopMode.LOOP_SINGLE -> {
+                                seekTo(0)
+                                start()
+                            }
+                            LoopMode.LOOP_SHUFFLE -> {
+                                if (unplayedSongs.isNotEmpty()) {
+                                    unplayedSongs.remove(file)
+                                    if (unplayedSongs.isNotEmpty()) {
+                                        val nextFile = unplayedSongs.random()
+                                        playAudioFile(nextFile)
+                                    } else {
+                                        unplayedSongs = currentPlaylist.toMutableList()
+                                        playAudioFile(unplayedSongs.random())
+                                    }
+                                }
+                            }
+                            LoopMode.LOOP_LIST -> {
+                                playNext()
+                            }
+                        }
                     }
 
                     println("Playing audio file: ${file.name}")
@@ -399,11 +457,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setLoopMode(mode: LoopMode) {
-        loopMode = mode
-        // TODO: Implement logic to apply the loop mode
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         mediaPlayer?.release()
@@ -411,6 +464,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     enum class LoopMode {
-        NO_LOOP, LOOP_SINGLE, LOOP_SHUFFLE
+        LOOP_SINGLE, LOOP_LIST, LOOP_SHUFFLE
     }
 }
