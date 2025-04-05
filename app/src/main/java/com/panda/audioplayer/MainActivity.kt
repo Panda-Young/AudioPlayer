@@ -1,7 +1,9 @@
 package com.panda.audioplayer
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.SeekBar
@@ -10,6 +12,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import java.io.File
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,6 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var audioArtist: TextView
     private lateinit var audioCover: ImageView
 
+    private var mediaPlayer: MediaPlayer? = null
     private var isPlaying: Boolean = false
     private var loopMode: LoopMode = LoopMode.NO_LOOP
 
@@ -32,16 +37,24 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Check if the permission is already granted
+        checkPermissions()
+
+        initializeUIComponents()
+
+        setButtonListeners()
+
+        setSeekBarListener()
+    }
+
+    private fun checkPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            // Request the permission if not granted
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
         } else {
-            // Permission already granted, proceed to read audio files
             readAudioFiles()
         }
+    }
 
-        // Initialize UI components
+    private fun initializeUIComponents() {
         playPauseButton = findViewById(R.id.play_pause_button)
         prevButton = findViewById(R.id.prev_button)
         nextButton = findViewById(R.id.next_button)
@@ -51,29 +64,17 @@ class MainActivity : AppCompatActivity() {
         audioTitle = findViewById(R.id.audio_title)
         audioArtist = findViewById(R.id.audio_artist)
         audioCover = findViewById(R.id.audio_cover)
+    }
 
-        // Set up button listeners
-        playPauseButton.setOnClickListener {
-            togglePlayPause()
-        }
+    private fun setButtonListeners() {
+        playPauseButton.setOnClickListener { togglePlayPause() }
+        prevButton.setOnClickListener { playPrevious() }
+        nextButton.setOnClickListener { playNext() }
+        loopButton.setOnClickListener { toggleLoopMode() }
+        playlistButton.setOnClickListener { openPlaylist() }
+    }
 
-        prevButton.setOnClickListener {
-            playPrevious()
-        }
-
-        nextButton.setOnClickListener {
-            playNext()
-        }
-
-        loopButton.setOnClickListener {
-            toggleLoopMode()
-        }
-
-        playlistButton.setOnClickListener {
-            openPlaylist()
-        }
-
-        // Set up seek bar listener
+    private fun setSeekBarListener() {
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
@@ -95,27 +96,52 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_READ_EXTERNAL_STORAGE) {
             if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                // Permission granted, proceed to read audio files
                 readAudioFiles()
             } else {
-                // Permission denied, show a dialog to inform the user
                 showPermissionDeniedDialog()
             }
         }
     }
 
-    private fun readAudioFiles() {
-        // Implement the logic to read audio files here
+    @SuppressLint("SdCardPath")
+    private fun readAudioFiles(): List<File> {
+        val audioPaths = listOf(
+            "/sdcard/Music/",
+            "/sdcard/Download/",
+            "/data/local/tmp/"
+        )
+
+        val audioFiles = mutableListOf<File>()
+        for (path in audioPaths) {
+            val directory = File(path)
+            if (directory.exists() && directory.isDirectory) {
+                listAudioFilesRecursively(directory, audioFiles)
+            }
+        }
+
+        return audioFiles
+    }
+
+    private fun listAudioFilesRecursively(directory: File, audioFiles: MutableList<File>) {
+        directory.listFiles()?.forEach { file ->
+            if (file.isDirectory) {
+                listAudioFilesRecursively(file, audioFiles)
+            } else if (file.isFile && isAudioFile(file)) {
+                audioFiles.add(file)
+            }
+        }
+    }
+
+    private fun isAudioFile(file: File): Boolean {
+        val audioExtensions = listOf(".mp3", ".wav", ".ogg", ".m4a")
+        return audioExtensions.any { file.name.endsWith(it, ignoreCase = true) }
     }
 
     private fun showPermissionDeniedDialog() {
         AlertDialog.Builder(this)
             .setTitle("Permission Denied")
             .setMessage("To read audio files, you need to grant the storage permission. Please enable it in the app settings.")
-            .setPositiveButton("Go to Settings") { _, _ ->
-                // Open app settings to allow the user to manually enable the permission
-                openAppSettings()
-            }
+            .setPositiveButton("Go to Settings") { _, _ -> openAppSettings() }
             .setNegativeButton("Cancel", null)
             .show()
     }
@@ -125,14 +151,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun togglePlayPause() {
-        if (isPlaying) {
-            pausePlayback()
-            playPauseButton.setImageResource(R.drawable.ic_play)
-        } else {
-            startPlayback()
-            playPauseButton.setImageResource(R.drawable.ic_pause)
+        mediaPlayer?.let {
+            if (isPlaying) {
+                pausePlayback()
+            } else {
+                if (it.isPlaying) {
+                    pausePlayback()
+                } else {
+                    startPlayback()
+                }
+            }
         }
-        isPlaying = !isPlaying
     }
 
     private fun playPrevious() {
@@ -161,24 +190,123 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openPlaylist() {
-        // TODO: Implement logic to open the playlist or queue
+        val audioFiles = readAudioFiles()
+        if (audioFiles.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("No Audio Files")
+                .setMessage("No audio files found in the specified directories.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
+        val audioFileNames = audioFiles.map { it.name }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Audio Files")
+            .setItems(audioFileNames) { _, which ->
+                val selectedFile = audioFiles[which]
+                playAudioFile(selectedFile)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun playAudioFile(file: File) {
+        if (mediaPlayer == null) {
+            mediaPlayer = MediaPlayer().apply {
+                try {
+                    setDataSource(file.absolutePath)
+                    prepare()
+                    start()
+                    this@MainActivity.isPlaying = true
+                    playPauseButton.setImageResource(R.drawable.ic_pause)
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    this@MainActivity.isPlaying = false
+                    playPauseButton.setImageResource(R.drawable.ic_play)
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Playback Error")
+                        .setMessage("Failed to play the audio file.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+            }
+        } else {
+            mediaPlayer?.let {
+                try {
+                    if (it.isPlaying) {
+                        it.stop()
+                        it.reset()
+                    }
+                    it.setDataSource(file.absolutePath)
+                    it.prepare()
+                    it.start()
+                    this@MainActivity.isPlaying = true
+                    playPauseButton.setImageResource(R.drawable.ic_pause)
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    this@MainActivity.isPlaying = false
+                    playPauseButton.setImageResource(R.drawable.ic_play)
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Playback Error")
+                        .setMessage("Failed to play the audio file.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+            }
+        }
     }
 
     private fun seekTo(progress: Int) {
-        // TODO: Implement logic to seek to a specific position in the track
+        mediaPlayer?.seekTo(progress)
     }
 
     private fun startPlayback() {
-        // TODO: Implement logic to start playback
+        mediaPlayer?.let {
+            if (!it.isPlaying) {
+                try {
+                    if (!it.isPlaying && it.currentPosition > 0) {
+                        it.start()
+                    } else {
+                        it.prepare()
+                        it.start()
+                    }
+                    isPlaying = true
+                    playPauseButton.setImageResource(R.drawable.ic_pause)
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    isPlaying = false
+                    playPauseButton.setImageResource(R.drawable.ic_play)
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Playback Error")
+                        .setMessage("Failed to start playback.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+            }
+        }
     }
 
     private fun pausePlayback() {
-        // TODO: Implement logic to pause playback
+        mediaPlayer?.let {
+            if (it.isPlaying) {
+                it.pause()
+                isPlaying = false
+                playPauseButton.setImageResource(R.drawable.ic_play)
+            }
+        }
     }
 
     private fun setLoopMode(mode: LoopMode) {
         loopMode = mode
         // TODO: Implement logic to apply the loop mode
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaPlayer?.release()
+        mediaPlayer = null
     }
 
     enum class LoopMode {
