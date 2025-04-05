@@ -94,6 +94,19 @@ class MainActivity : AppCompatActivity() {
             val firstFile = currentPlaylist[0]
             updateUIForSelectedFile(firstFile)
             currentIndex = 0
+
+            mediaPlayer = MediaPlayer().apply {
+                try {
+                    setDataSource(firstFile.absolutePath)
+                    prepare()
+                    seekBar.max = duration
+                    totalTime.text = formatTime(duration)
+                    startUpdatingSeekBar()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    println("Failed to initialize mediaPlayer for first file")
+                }
+            }
         } else {
             println("No audio files found")
         }
