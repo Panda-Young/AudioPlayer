@@ -409,6 +409,10 @@ class MainActivity : AppCompatActivity() {
                 playAudioFile(selectedFile)
                 currentIndex = which
             }
+            .setNeutralButton("Rescan") { _, _ ->
+                currentPlaylist = scanAllLocalFiles()
+                openPlaylist()
+            }
             .setNegativeButton("Cancel", null)
             .show()
     }
