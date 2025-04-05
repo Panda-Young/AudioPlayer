@@ -15,6 +15,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.IOException
+import android.os.Handler
+import android.os.Looper
 
 class MainActivity : AppCompatActivity() {
 
@@ -106,16 +108,16 @@ class MainActivity : AppCompatActivity() {
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
-                    seekTo(progress)
+                    mediaPlayer?.seekTo(progress)
                 }
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                // Do nothing
+                stopUpdatingSeekBar()
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                // Do nothing
+                startUpdatingSeekBar()
             }
         })
     }
@@ -280,6 +282,13 @@ class MainActivity : AppCompatActivity() {
                 val artistName = getArtistName(file)
                 audioArtist.text = artistName
                 audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
+                seekBar.max = player.duration
+
+                player.setOnCompletionListener {
+                    isPlaying = false
+                    playPauseButton.setImageResource(R.drawable.ic_play)
+                }
+
                 println("Playing audio file: ${file.name}")
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -304,6 +313,13 @@ class MainActivity : AppCompatActivity() {
                     val artistName = getArtistName(file)
                     audioArtist.text = artistName
                     audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
+                    seekBar.max = this.duration
+
+                    setOnCompletionListener {
+                        this@MainActivity.isPlaying = false
+                        playPauseButton.setImageResource(R.drawable.ic_play)
+                    }
+
                     println("Playing audio file: ${file.name}")
                 } catch (e: IOException) {
                     e.printStackTrace()
@@ -326,6 +342,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun seekTo(progress: Int) {
         mediaPlayer?.seekTo(progress)
+    }
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val updateSeekBar = object : Runnable {
+        override fun run() {
+            mediaPlayer?.let { player ->
+                seekBar.progress = player.currentPosition
+            }
+            handler.postDelayed(this, 1000)
+        }
+    }
+
+    private fun startUpdatingSeekBar() {
+        handler.post(updateSeekBar)
+    }
+
+    private fun stopUpdatingSeekBar() {
+        handler.removeCallbacks(updateSeekBar)
     }
 
     private fun startPlayback() {
@@ -360,6 +394,7 @@ class MainActivity : AppCompatActivity() {
                 player.pause()
                 isPlaying = false
                 playPauseButton.setImageResource(R.drawable.ic_play)
+                stopUpdatingSeekBar()
             }
         }
     }
