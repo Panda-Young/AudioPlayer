@@ -382,7 +382,15 @@ class MainActivity : AppCompatActivity() {
         val adapter = object : ArrayAdapter<File>(this, R.layout.playlist_item, R.id.audioFileName, audioFiles) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val view = super.getView(position, convertView, parent)
+                val audioFileName = view.findViewById<TextView>(R.id.audioFileName)
                 val removeIcon = view.findViewById<ImageView>(R.id.removeIcon)
+                val file = audioFiles[position]
+                if (currentIndex != -1 && file == currentPlaylist[currentIndex]) {
+                    audioFileName.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.highlight_color))
+                } else {
+                    audioFileName.setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.black))
+                }
+
                 removeIcon.setOnClickListener {
                     val fileToRemove = audioFiles[position]
                     audioFiles.removeAt(position)
@@ -436,6 +444,7 @@ class MainActivity : AppCompatActivity() {
                 seekBar.max = player.duration
                 totalTime.text = formatTime(player.duration)
                 startUpdatingSeekBar()
+                currentIndex = currentPlaylist.indexOf(file)
 
                 player.setOnCompletionListener {
                     when (loopMode) {
@@ -488,6 +497,7 @@ class MainActivity : AppCompatActivity() {
                     seekBar.max = this.duration
                     totalTime.text = formatTime(this.duration)
                     startUpdatingSeekBar()
+                    currentIndex = currentPlaylist.indexOf(file)
 
                     setOnCompletionListener {
                         when (loopMode) {
