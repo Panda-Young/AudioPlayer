@@ -21,6 +21,7 @@ import android.os.Looper
 class MainActivity : AppCompatActivity() {
 
     private val REQUEST_CODE_READ_EXTERNAL_STORAGE = 100
+    private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var playPauseButton: ImageView
     private lateinit var prevButton: ImageView
@@ -31,6 +32,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var audioTitle: TextView
     private lateinit var audioArtist: TextView
     private lateinit var audioCover: ImageView
+    private lateinit var currentTime: TextView
+    private lateinit var totalTime: TextView
 
     private var mediaPlayer: MediaPlayer? = null
     private var isPlaying: Boolean = false
@@ -95,6 +98,8 @@ class MainActivity : AppCompatActivity() {
         audioTitle = findViewById(R.id.audio_title)
         audioArtist = findViewById(R.id.audio_artist)
         audioCover = findViewById(R.id.audio_cover)
+        currentTime = findViewById(R.id.current_time)
+        totalTime = findViewById(R.id.total_time)
     }
 
     private fun setButtonListeners() {
@@ -141,8 +146,7 @@ class MainActivity : AppCompatActivity() {
     private fun readAudioFiles(): List<File> {
         val audioPaths = listOf(
             "/sdcard/Music/",
-            "/sdcard/Download/",
-            "/data/local/tmp/"
+            "/sdcard/Download/"
         )
 
         val audioFiles = mutableListOf<File>()
@@ -303,6 +307,8 @@ class MainActivity : AppCompatActivity() {
                 audioArtist.text = artistName
                 audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
                 seekBar.max = player.duration
+                totalTime.text = formatTime(player.duration)
+                startUpdatingSeekBar()
 
                 player.setOnCompletionListener {
                     when (loopMode) {
@@ -353,6 +359,8 @@ class MainActivity : AppCompatActivity() {
                     audioArtist.text = artistName
                     audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
                     seekBar.max = this.duration
+                    totalTime.text = formatTime(this.duration)
+                    startUpdatingSeekBar()
 
                     setOnCompletionListener {
                         when (loopMode) {
@@ -402,14 +410,22 @@ class MainActivity : AppCompatActivity() {
         mediaPlayer?.seekTo(progress)
     }
 
-    private val handler = Handler(Looper.getMainLooper())
     private val updateSeekBar = object : Runnable {
         override fun run() {
             mediaPlayer?.let { player ->
                 seekBar.progress = player.currentPosition
+                currentTime.text = formatTime(player.currentPosition)
+                totalTime.text = formatTime(player.duration)
             }
             handler.postDelayed(this, 1000)
         }
+    }
+
+    private fun formatTime(milliseconds: Int): String {
+        val totalSeconds = milliseconds / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02d:%02d", minutes, seconds)
     }
 
     private fun startUpdatingSeekBar() {
