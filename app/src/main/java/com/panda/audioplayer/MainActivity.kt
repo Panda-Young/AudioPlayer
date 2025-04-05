@@ -1,5 +1,6 @@
 package com.panda.audioplayer
 
+import android.media.MediaMetadataRetriever
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
@@ -18,15 +19,15 @@ import java.io.IOException
 import android.os.Handler
 import android.os.Looper
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
 import android.provider.MediaStore
 import android.os.Build
 import android.os.Environment
+import androidx.core.net.toUri
 
 class MainActivity : AppCompatActivity() {
 
-    private val REQUEST_CODE_READ_EXTERNAL_STORAGE = 100
+    private val requestCodeReadExternalStorage  = 100
     private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var playPauseButton: ImageView
@@ -62,14 +63,14 @@ class MainActivity : AppCompatActivity() {
     private fun checkAndRequestPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             println("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), requestCodeReadExternalStorage )
         } else {
             println("READ_EXTERNAL_STORAGE permission already granted")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (!Environment.isExternalStorageManager()) {
                     println("MANAGE_EXTERNAL_STORAGE permission not granted")
                     val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.data = Uri.parse("package:${packageName}")
+                    intent.data = "package:${packageName}".toUri()
                     startActivity(intent)
                 } else {
                     println("MANAGE_EXTERNAL_STORAGE permission granted")
@@ -162,7 +163,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_CODE_READ_EXTERNAL_STORAGE) {
+        if (requestCode == requestCodeReadExternalStorage ) {
             if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                 println("READ_EXTERNAL_STORAGE permission granted")
                 checkAndRequestPermissions()
@@ -465,12 +466,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getArtistName(file: File): String? {
-        return null
-    }
 
-    private fun seekTo(progress: Int) {
-        mediaPlayer?.seekTo(progress)
+    private fun getArtistName(file: File): String? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(file.absolutePath)
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            retriever.release()
+        }
     }
 
     private val updateSeekBar = object : Runnable {
@@ -484,6 +491,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("DefaultLocale")
     private fun formatTime(milliseconds: Int): String {
         val totalSeconds = milliseconds / 1000
         val minutes = totalSeconds / 60
@@ -497,32 +505,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun stopUpdatingSeekBar() {
         handler.removeCallbacks(updateSeekBar)
-    }
-
-    private fun startPlayback() {
-        mediaPlayer?.let {
-            if (!it.isPlaying) {
-                try {
-                    if (!it.isPlaying && it.currentPosition > 0) {
-                        it.start()
-                    } else {
-                        it.prepare()
-                        it.start()
-                    }
-                    isPlaying = true
-                    playPauseButton.setImageResource(R.drawable.ic_pause)
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                    isPlaying = false
-                    playPauseButton.setImageResource(R.drawable.ic_play)
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Playback Error")
-                        .setMessage("Failed to start playback.")
-                        .setPositiveButton("OK", null)
-                        .show()
-                }
-            }
-        }
     }
 
     private fun pausePlayback() {

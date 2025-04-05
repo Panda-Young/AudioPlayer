@@ -9,4 +9,7 @@
     <string name="pause">Pause</string>
     <string name="next">Next</string>
     <string name="playlist">Playlist</string>
+    <string name="_00_00">00:00</string>
+    <string name="scan_local_songs">Scan Local Songs</string>
+    <string name="_00_01">00:00</string>
 </resources>

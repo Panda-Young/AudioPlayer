@@ -21,9 +21,10 @@
             android:id="@+id/audio_cover"
             android:layout_width="100dp"
             android:layout_height="100dp"
-            android:src="@drawable/ic_launcher_foreground"
             android:layout_gravity="center_horizontal"
-            android:contentDescription="@string/audio_cover" />
+            android:contentDescription="@string/audio_cover"
+            android:src="@drawable/ic_launcher_foreground"
+            tools:ignore="ImageContrastCheck" />
 
         <TextView
             android:id="@+id/audio_title"
@@ -64,7 +65,7 @@
                 android:id="@+id/current_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="00:00"
+                android:text="@string/_00_00"
                 android:textSize="14sp" />
 
             <SeekBar
@@ -79,7 +80,7 @@
                 android:id="@+id/total_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="00:00"
+                android:text="@string/_00_01"
                 android:textSize="14sp" />
         </LinearLayout>
 
@@ -113,8 +114,9 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/play"
                 android:src="@drawable/ic_play"
-                android:contentDescription="@string/play" />
+                tools:ignore="ImageContrastCheck" />
 
             <ImageView
                 android:id="@+id/next_button"
