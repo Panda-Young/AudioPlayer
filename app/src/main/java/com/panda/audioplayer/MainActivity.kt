@@ -1,12 +1,19 @@
 package com.panda.audioplayer
 
-import androidx.appcompat.app.AppCompatActivity
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
-import android.widget.ImageView
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
+
+    private val REQUEST_CODE_READ_EXTERNAL_STORAGE = 100
 
     private lateinit var playPauseButton: ImageView
     private lateinit var prevButton: ImageView
@@ -24,6 +31,15 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Check if the permission is already granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            // Request the permission if not granted
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_READ_EXTERNAL_STORAGE)
+        } else {
+            // Permission already granted, proceed to read audio files
+            readAudioFiles()
+        }
 
         // Initialize UI components
         playPauseButton = findViewById(R.id.play_pause_button)
@@ -73,6 +89,39 @@ class MainActivity : AppCompatActivity() {
                 // Do nothing
             }
         })
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_READ_EXTERNAL_STORAGE) {
+            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                // Permission granted, proceed to read audio files
+                readAudioFiles()
+            } else {
+                // Permission denied, show a dialog to inform the user
+                showPermissionDeniedDialog()
+            }
+        }
+    }
+
+    private fun readAudioFiles() {
+        // Implement the logic to read audio files here
+    }
+
+    private fun showPermissionDeniedDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Permission Denied")
+            .setMessage("To read audio files, you need to grant the storage permission. Please enable it in the app settings.")
+            .setPositiveButton("Go to Settings") { _, _ ->
+                // Open app settings to allow the user to manually enable the permission
+                openAppSettings()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun openAppSettings() {
+        // Implement the logic to open app settings here
     }
 
     private fun togglePlayPause() {
