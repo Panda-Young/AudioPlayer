@@ -1,33 +1,32 @@
 package com.panda.audioplayer
 
-import android.media.MediaMetadataRetriever
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore
+import android.provider.Settings
+import android.util.Log
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
-import android.widget.Button
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import java.io.File
 import java.io.IOException
-import android.os.Handler
-import android.os.Looper
-import android.content.Intent
-import android.provider.Settings
-import android.provider.MediaStore
-import android.os.Build
-import android.os.Environment
-import androidx.core.net.toUri
-import android.widget.ArrayAdapter
-import android.view.ViewGroup
-import android.util.Log
 
 object Logger {
     private const val TAG = "AudioPlayer"
@@ -475,9 +474,10 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
                 isPlaying = false
                 playPauseButton.setImageResource(R.drawable.ic_play)
+                currentPlaylist.remove(file)
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle("Playback Error")
-                    .setMessage("Failed to play the audio file.")
+                    .setMessage("Failed to play the audio file: ${file.name}")
                     .setPositiveButton("OK", null)
                     .show()
                 Logger.loge("Failed to play audio file: ${file.name}")
@@ -528,9 +528,10 @@ class MainActivity : AppCompatActivity() {
                     e.printStackTrace()
                     this@MainActivity.isPlaying = false
                     playPauseButton.setImageResource(R.drawable.ic_play)
+                    currentPlaylist.remove(file)
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("Playback Error")
-                        .setMessage("Failed to play the audio file.")
+                        .setMessage("Failed to play the audio file: ${file.name}")
                         .setPositiveButton("OK", null)
                         .show()
                     Logger.loge("Failed to play audio file: ${file.name}")
