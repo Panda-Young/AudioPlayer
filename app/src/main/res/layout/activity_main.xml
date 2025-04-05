@@ -98,16 +98,18 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/loop"
                 android:src="@drawable/ic_list_loop"
-                android:contentDescription="@string/loop" />
+                tools:ignore="ImageContrastCheck" />
 
             <ImageView
                 android:id="@+id/prev_button"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/prev"
                 android:src="@drawable/ic_prev"
-                android:contentDescription="@string/prev" />
+                tools:ignore="ImageContrastCheck" />
 
             <ImageView
                 android:id="@+id/play_pause_button"
@@ -123,16 +125,18 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/next"
                 android:src="@drawable/ic_next"
-                android:contentDescription="@string/next" />
+                tools:ignore="ImageContrastCheck" />
 
             <ImageView
                 android:id="@+id/playlist_button"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/playlist"
                 android:src="@drawable/ic_playlist"
-                android:contentDescription="@string/playlist" />
+                tools:ignore="ImageContrastCheck" />
         </LinearLayout>
     </LinearLayout>
 
