@@ -33,6 +33,8 @@ class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var isPlaying: Boolean = false
     private var loopMode: LoopMode = LoopMode.NO_LOOP
+    private var currentPlaylist: List<File> = emptyList()
+    private var currentIndex: Int = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -166,11 +168,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playPrevious() {
-        // TODO: Implement logic to play the previous track
+        if (currentPlaylist.isEmpty() || currentIndex == -1) return
+
+        val previousIndex = if (currentIndex == 0) currentPlaylist.size - 1 else currentIndex - 1
+        playAudioFile(currentPlaylist[previousIndex])
+        currentIndex = previousIndex
     }
 
     private fun playNext() {
-        // TODO: Implement logic to play the next track
+        if (currentPlaylist.isEmpty() || currentIndex == -1) return
+
+        val nextIndex = if (currentIndex == currentPlaylist.size - 1) 0 else currentIndex + 1
+        playAudioFile(currentPlaylist[nextIndex])
+        currentIndex = nextIndex
     }
 
     private fun toggleLoopMode() {
@@ -201,6 +211,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        currentPlaylist = audioFiles
         val audioFileNames = audioFiles.map { it.name }.toTypedArray()
 
         AlertDialog.Builder(this)
@@ -208,6 +219,7 @@ class MainActivity : AppCompatActivity() {
             .setItems(audioFileNames) { _, which ->
                 val selectedFile = audioFiles[which]
                 playAudioFile(selectedFile)
+                currentIndex = which
             }
             .setNegativeButton("Cancel", null)
             .show()
