@@ -90,26 +90,40 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAndRequestPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            Logger.logi("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), requestCodeReadExternalStorage )
-        } else {
-            Logger.logi("READ_EXTERNAL_STORAGE permission already granted")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                if (!Environment.isExternalStorageManager()) {
-                    Logger.logw("MANAGE_EXTERNAL_STORAGE permission not granted")
-                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.data = "package:${packageName}".toUri()
-                    startActivity(intent)
-                } else {
-                    Logger.logi("MANAGE_EXTERNAL_STORAGE permission granted")
-                    scanAllLocalFiles()
-                    playFirstAudioFileIfAvailable()
-                }
+        val permissionsToRequest = mutableListOf<String>()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.READ_MEDIA_AUDIO)
+                Logger.logw("READ_MEDIA_AUDIO permission not granted, requesting permission")
             } else {
-                scanAllLocalFiles()
-                playFirstAudioFileIfAvailable()
+                Logger.logi("READ_MEDIA_AUDIO permission already granted")
             }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                Logger.logw("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
+            } else {
+                Logger.logi("READ_EXTERNAL_STORAGE permission already granted")
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                Logger.logw("MANAGE_EXTERNAL_STORAGE permission not granted, redirecting to settings")
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                intent.data = "package:${packageName}".toUri()
+                startActivity(intent)
+            } else {
+                Logger.logi("MANAGE_EXTERNAL_STORAGE permission granted")
+            }
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), requestCodeReadExternalStorage)
+        } else {
+            Logger.logi("All required permissions already granted")
+            playFirstAudioFileIfAvailable()
         }
     }
 
@@ -192,13 +206,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == requestCodeReadExternalStorage ) {
-            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                Logger.logd("READ_EXTERNAL_STORAGE permission granted")
-                checkAndRequestPermissions()
+        if (requestCode == requestCodeReadExternalStorage) {
+            if (grantResults.isNotEmpty()) {
+                for (i in permissions.indices) {
+                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                        Logger.logi("${permissions[i]} permission granted")
+                    } else {
+                        Logger.logw("${permissions[i]} permission denied")
+                    }
+                }
+                checkAndRequestPermissions() // 重新检查权限状态
             } else {
-                Logger.logd("READ_EXTERNAL_STORAGE permission denied")
-                showPermissionDeniedDialog()
+                Logger.logw("No permission results received")
             }
         }
     }
@@ -489,10 +508,10 @@ class MainActivity : AppCompatActivity() {
                 currentPlaylist.remove(file)
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle("Playback Error")
-                    .setMessage("Failed to play the audio file: ${file.name}")
+                    .setMessage("Failed to play the audio file: ${file.name}, ${e.message}")
                     .setPositiveButton("OK", null)
                     .show()
-                Logger.loge("Failed to play audio file: ${file.name}")
+                Logger.loge("Failed to play audio file: ${file.name}, ${e.message}")
             }
         } ?: run {
             mediaPlayer = MediaPlayer().apply {
@@ -543,10 +562,10 @@ class MainActivity : AppCompatActivity() {
                     currentPlaylist.remove(file)
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("Playback Error")
-                        .setMessage("Failed to play the audio file: ${file.name}")
+                        .setMessage("Failed to play the audio file: ${file.name}, ${e.message}")
                         .setPositiveButton("OK", null)
                         .show()
-                    Logger.loge("Failed to play audio file: ${file.name}")
+                    Logger.loge("Failed to play audio file: ${file.name}, ${e.message}")
                 }
             }
         }
