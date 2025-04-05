@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Button
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -24,6 +25,8 @@ import android.provider.MediaStore
 import android.os.Build
 import android.os.Environment
 import androidx.core.net.toUri
+import android.widget.ArrayAdapter
+import android.view.ViewGroup
 
 class MainActivity : AppCompatActivity() {
 
@@ -45,7 +48,7 @@ class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var isPlaying: Boolean = false
     private var loopMode: LoopMode = LoopMode.LOOP_LIST
-    private var currentPlaylist: List<File> = emptyList()
+    private var currentPlaylist: MutableList<File> = mutableListOf()
     private var currentIndex: Int = -1
     private var unplayedSongs: MutableList<File> = mutableListOf()
 
@@ -74,18 +77,18 @@ class MainActivity : AppCompatActivity() {
                     startActivity(intent)
                 } else {
                     println("MANAGE_EXTERNAL_STORAGE permission granted")
-                    readAudioFiles()
+                    scanAllLocalFiles()
                     playFirstAudioFileIfAvailable()
                 }
             } else {
-                readAudioFiles()
+                scanAllLocalFiles()
                 playFirstAudioFileIfAvailable()
             }
         }
     }
 
     private fun playFirstAudioFileIfAvailable() {
-        currentPlaylist = readAudioFiles()
+        currentPlaylist = scanAllLocalFiles()
         if (currentPlaylist.isNotEmpty()) {
             if (!::audioTitle.isInitialized) {
                 println("audioTitle is not initialized")
@@ -175,11 +178,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SdCardPath")
-    private fun readAudioFiles(): List<File> {
+    private fun scanAllLocalFiles(): MutableList<File> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            queryAudioFiles()
+            queryAudioFiles().toMutableList()
         } else {
-            // old version Android 10 and below to directly access the audio files
             val audioPaths = listOf(
                 Environment.getExternalStorageDirectory().absolutePath + "/Music/",
                 Environment.getExternalStorageDirectory().absolutePath + "/Download/"
@@ -330,7 +332,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openPlaylist() {
-        val audioFiles = readAudioFiles()
+        val audioFiles = scanAllLocalFiles()
         if (audioFiles.isEmpty()) {
             AlertDialog.Builder(this)
                 .setTitle("No Audio Files")
@@ -341,11 +343,33 @@ class MainActivity : AppCompatActivity() {
         }
 
         currentPlaylist = audioFiles
-        val audioFileNames = audioFiles.map { it.name }.toTypedArray()
+
+        val adapter = object : ArrayAdapter<File>(this, R.layout.playlist_item, R.id.audioFileName, audioFiles) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                val removeIcon = view.findViewById<ImageView>(R.id.removeIcon)
+                removeIcon.setOnClickListener {
+                    val fileToRemove = audioFiles[position]
+                    audioFiles.removeAt(position)
+                    notifyDataSetChanged()
+                    if (currentPlaylist == audioFiles) {
+                        currentPlaylist = audioFiles.toMutableList()
+                    }
+                    if (fileToRemove == currentPlaylist.getOrNull(currentIndex)) {
+                        mediaPlayer?.stop()
+                        mediaPlayer?.release()
+                        mediaPlayer = null
+                        isPlaying = false
+                        playPauseButton.setImageResource(R.drawable.ic_play)
+                    }
+                }
+                return view
+            }
+        }
 
         AlertDialog.Builder(this)
             .setTitle("Audio Files")
-            .setItems(audioFileNames) { _, which ->
+            .setAdapter(adapter) { _, which ->
                 val selectedFile = audioFiles[which]
                 playAudioFile(selectedFile)
                 currentIndex = which
