@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.view.View
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
@@ -221,6 +222,10 @@ class MainActivity : AppCompatActivity() {
                     start()
                     this@MainActivity.isPlaying = true
                     playPauseButton.setImageResource(R.drawable.ic_pause)
+                    audioTitle.text = file.name
+                    val artistName = getArtistName(file)
+                    audioArtist.text = artistName
+                    audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
                 } catch (e: IOException) {
                     e.printStackTrace()
                     this@MainActivity.isPlaying = false
@@ -244,6 +249,10 @@ class MainActivity : AppCompatActivity() {
                     it.start()
                     this@MainActivity.isPlaying = true
                     playPauseButton.setImageResource(R.drawable.ic_pause)
+                    audioTitle.text = file.name
+                    val artistName = getArtistName(file)
+                    audioArtist.text = artistName
+                    audioArtist.visibility = if (artistName.isNullOrBlank()) View.GONE else View.VISIBLE
                 } catch (e: IOException) {
                     e.printStackTrace()
                     this@MainActivity.isPlaying = false
@@ -256,6 +265,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun getArtistName(file: File): String? {
+        return null
     }
 
     private fun seekTo(progress: Int) {
