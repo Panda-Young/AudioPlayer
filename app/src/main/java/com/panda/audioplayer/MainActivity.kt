@@ -305,19 +305,6 @@ class MainActivity : AppCompatActivity() {
         return audioExtensions.any { file.name.endsWith(it, ignoreCase = true) }
     }
 
-    private fun showPermissionDeniedDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Permission Denied")
-            .setMessage("To read audio files, you need to grant the storage permission. Please enable it in the app settings.")
-            .setPositiveButton("Go to Settings") { _, _ -> openAppSettings() }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun openAppSettings() {
-        // Implement the logic to open app settings here
-    }
-
     private fun togglePlayPause() {
         mediaPlayer?.let { player ->
             if (isPlaying) {
