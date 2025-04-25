@@ -150,9 +150,47 @@
         android:elevation="4dp"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/top_info_area"
-        app:layout_constraintBottom_toTopOf="@id/bottom_control_area"
+        app:layout_constraintBottom_toTopOf="@id/playlist_control_area"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:listitem="@layout/playlist_item" />
+        tools:listitem="@layout/playlist_item"/>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/playlist_control_area"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/playlist_recycler_view"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/rescanButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rescan"
+            android:textSize="12sp"
+            android:padding="4dp"
+            android:background="@color/playlist_background"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <TextView
+            android:id="@+id/closeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Close"
+            android:textSize="12sp"
+            android:padding="4dp"
+            android:background="@color/playlist_background"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -27,8 +27,8 @@ class PlaylistAdapter(
 
     override fun onBindViewHolder(holder: PlaylistViewHolder, position: Int) {
         val audioFilePath = playlist[position]
-        val fileName = File(audioFilePath).name // Extract file name from the full path
-        holder.audioFileName.text = fileName // Display only the file name
+        val fileName = File(audioFilePath).name
+        holder.audioFileName.text = fileName
         holder.removeIcon.setOnClickListener {
             onRemoveClickListener(audioFilePath)
         }
