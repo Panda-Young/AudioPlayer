@@ -52,6 +52,11 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         }
         playlistRecyclerView.adapter = playlistAdapter
 
+        // Default select the first audio file
+        if (playlist.isNotEmpty()) {
+            playlistAdapter.setSelectedPosition(0)
+        }
+
         // Initialize Rescan and Close buttons
         rescanButton = findViewById(R.id.rescanButton)
         closeButton = findViewById(R.id.closeButton)

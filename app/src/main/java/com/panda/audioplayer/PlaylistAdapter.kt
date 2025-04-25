@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 
@@ -14,6 +15,7 @@ class PlaylistAdapter(
 ) : RecyclerView.Adapter<PlaylistAdapter.PlaylistViewHolder>() {
 
     private var onItemClickListener: ((String) -> Unit)? = null
+    private var selectedPosition = RecyclerView.NO_POSITION
 
     class PlaylistViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val audioFileName: TextView = itemView.findViewById(R.id.audioFileName)
@@ -34,6 +36,15 @@ class PlaylistAdapter(
         }
         holder.itemView.setOnClickListener {
             onItemClickListener?.invoke(audioFilePath)
+            setSelectedPosition(position)
+        }
+        // Highlight the selected item
+        holder.itemView.isSelected = selectedPosition == position
+        // Change text color based on selection
+        if (selectedPosition == position) {
+            holder.audioFileName.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.highlight_color))
+        } else {
+            holder.audioFileName.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.default_text_color))
         }
     }
 
@@ -51,5 +62,12 @@ class PlaylistAdapter(
 
     fun setOnItemClickListener(listener: (String) -> Unit) {
         onItemClickListener = listener
+    }
+
+    fun setSelectedPosition(position: Int) {
+        val previousSelected = selectedPosition
+        selectedPosition = position
+        notifyItemChanged(previousSelected)
+        notifyItemChanged(selectedPosition)
     }
 }
