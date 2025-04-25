@@ -102,7 +102,7 @@ class AudioFileManager(private val contentResolver: ContentResolver) {
     }
 
     private fun isAudioFile(file: File): Boolean {
-        val audioExtensions = listOf(".mp3", ".wav", ".ogg", ".m4a")
+        val audioExtensions = listOf(".mp3", ".wav", ".ogg", ".m4a", ".flac")
         return audioExtensions.any { file.name.endsWith(it, ignoreCase = true) }
     }
 }

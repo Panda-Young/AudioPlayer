@@ -1,5 +1,6 @@
 package com.panda.audioplayer
 
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
@@ -32,7 +33,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        Logger.logd("MainActivity")
+        Logger.logd("Start MainActivity. SDK Version: ${Build.VERSION.SDK_INT}")
 
         // Initialize PermissionManager
         permissionManager = PermissionManager(this)
