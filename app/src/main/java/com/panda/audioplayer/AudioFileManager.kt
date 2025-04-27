@@ -24,7 +24,9 @@ class AudioFileManager(private val contentResolver: ContentResolver) {
 
     @SuppressLint("SdCardPath")
     fun scanAllLocalFiles(): MutableList<File> {
-        return cachedAudioFiles ?: run {
+        // Check if cachedAudioFiles is null or empty, and proceed with scanning if necessary
+        return if (cachedAudioFiles.isNullOrEmpty()) {
+            Logger.logd("Cached audio files are null or empty, performing a fresh scan...")
             val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 queryAudioFiles().toMutableList()
             } else {
@@ -41,8 +43,12 @@ class AudioFileManager(private val contentResolver: ContentResolver) {
                 }
                 audioFiles
             }
+            // Update the cache with the new result
             cachedAudioFiles = result
             result
+        } else {
+            Logger.logd("Using cached audio files")
+            cachedAudioFiles!!
         }
     }
 
