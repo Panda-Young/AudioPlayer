@@ -59,6 +59,7 @@ class AudioFileManager(private val contentResolver: ContentResolver) {
             if (file.isDirectory) {
                 listAudioFilesRecursively(file, audioFiles, excludedPaths)
             } else if (file.isFile && isAudioFile(file)) {
+                Logger.logd("Found audio file: ${file.absolutePath}")
                 audioFiles.add(file)
             }
         }
