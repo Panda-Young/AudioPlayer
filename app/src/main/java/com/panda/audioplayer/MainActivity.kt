@@ -131,7 +131,6 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
             val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
             audioTrackManager.startPlay(selectedFilePath)
             playPauseButton.setImageResource(R.drawable.ic_pause) // Switch to pause icon
-            Logger.logi("Audio started playing")
         }
     }
 

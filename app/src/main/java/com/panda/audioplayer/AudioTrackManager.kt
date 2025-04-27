@@ -53,6 +53,7 @@ class AudioTrackManager(private val sampleRate: Int) {
             stopPlay()
             this.filePath = filePath
             audioFile = RandomAccessFile(filePath, "r")
+            Logger.logi("Audio started playing $filePath")
             val wavFile = WavFile(File(filePath))
             positionOffset = wavFile.getDataStartOffset().toLong()
             audioFileLength = audioFile?.length() ?: 0
@@ -153,8 +154,9 @@ class AudioTrackManager(private val sampleRate: Int) {
         return if (filePath == null) {
             0
         } else {
-            val wavFile = WavFile(File(filePath))
-            wavFile.getTotalDuration()
+            // val wavFile = WavFile(File(filePath))
+            // wavFile.getTotalDuration()
+            ((audioFileLength - positionOffset) * 1000 / (sampleRate * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1))).toInt()
         }
     }
 

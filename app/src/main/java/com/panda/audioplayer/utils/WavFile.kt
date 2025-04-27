@@ -88,6 +88,7 @@ class WavFile(private val file: File) {
                                     (fmtData[7].toInt() and 0xFF shl 24)
                             bitDepth = fmtData[14].toInt() and 0xFF or (fmtData[15].toInt() and 0xFF shl 8)
                             fmtChunkFound = true
+                            Logger.logd("Parsed WAV header: audioFormat=$audioFormat, channels=$channels, sampleRate=$sampleRate, bitDepth=$bitDepth")
                         }
                         "data" -> {
                             // Parse data chunk
