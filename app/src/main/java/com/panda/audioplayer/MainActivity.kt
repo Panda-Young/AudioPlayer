@@ -15,6 +15,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import com.panda.audioplayer.permission.PermissionManager
 import com.panda.audioplayer.utils.Logger
 import androidx.core.view.isVisible
+import android.content.Context
 
 class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
@@ -34,6 +35,13 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         permissionHandler = PermissionHandler(this)
         audioManager = AudioManager(this)
         audioTrackManager = AudioTrackManager(44100) // Initialize AudioTrackManager with sample rate
+
+        audioTrackManager.onPlaybackComplete = {
+            runOnUiThread {
+                val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
+                playPauseButton.setImageResource(R.drawable.ic_play)
+            }
+        }
 
         // Initialize views
         viewInitializer.initializeViews()
@@ -63,6 +71,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
     private fun setupListeners() {
         viewInitializer.rescanButton.setOnClickListener {
+            audioManager.refreshAudioFiles()
             loadAudioFiles()
             Logger.logi("Rescanned audio files")
         }
@@ -86,12 +95,12 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
         if (audioTrackManager.isPlaying) {
             audioTrackManager.pausePlay()
-            playPauseButton.setImageResource(R.drawable.ic_play) // 切换到播放图标
+            playPauseButton.setImageResource(R.drawable.ic_play) // Switch to play icon
             Logger.logi("Audio paused")
         } else {
             val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
             audioTrackManager.startPlay(selectedFilePath)
-            playPauseButton.setImageResource(R.drawable.ic_pause) // 切换到暂停图标
+            playPauseButton.setImageResource(R.drawable.ic_pause) // Switch to pause icon
             Logger.logi("Audio started playing")
         }
     }
@@ -174,16 +183,20 @@ class PermissionHandler(private val activity: MainActivity) {
     }
 }
 
-class AudioManager(private val activity: MainActivity) {
+class AudioManager(private val context: Context) {
 
     private lateinit var audioFileManager: AudioFileManager
 
     fun initializeAudioManager() {
-        audioFileManager = AudioFileManager(activity.contentResolver)
+        audioFileManager = AudioFileManager(context.contentResolver, context)
     }
 
     fun getAudioFileNames(): List<String> {
         val audioFiles = audioFileManager.scanAllLocalFiles()
         return audioFiles.map { it.absolutePath }
+    }
+
+    fun refreshAudioFiles() {
+        audioFileManager.refreshAudioFiles()
     }
 }

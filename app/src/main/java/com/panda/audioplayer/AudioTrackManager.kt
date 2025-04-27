@@ -23,6 +23,7 @@ class AudioTrackManager(private val sampleRate: Int) {
     private var pauseOffset: Long = 0
     private var filePath: String? = null
     private var flagJump = false
+    var onPlaybackComplete: (() -> Unit)? = null
 
     init {
         initializeAudioTrack()
@@ -77,6 +78,10 @@ class AudioTrackManager(private val sampleRate: Int) {
                             audioTrack?.pause()
                             break
                         }
+                    }
+                    if (isPlaying && audioFile?.filePointer ?: 0 >= audioFileLength) {
+                        isPlaying = false
+                        onPlaybackComplete?.invoke()
                     }
                 } catch (e: IOException) {
                     Logger.loge("Error during playback: ${e.message}")
