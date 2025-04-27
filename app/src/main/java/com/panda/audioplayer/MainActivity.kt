@@ -2,6 +2,8 @@ package com.panda.audioplayer
 
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -24,6 +26,13 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     private lateinit var audioManager: AudioManager
     private lateinit var audioTrackManager: AudioTrackManager
     private val playlist = mutableListOf<String>()
+    private val handler = Handler(Looper.getMainLooper())
+    private val updateSeekBarRunnable = object : Runnable {
+        override fun run() {
+            updateSeekBar()
+            handler.postDelayed(this, 1000) // Update every second
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,7 +48,12 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         audioTrackManager.onPlaybackComplete = {
             runOnUiThread {
                 val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
-                playPauseButton.setImageResource(R.drawable.ic_play)
+                playPauseButton.setImageResource(R.drawable.ic_play) // Switch to play icon
+
+                // Reset the SeekBar and time labels
+                viewInitializer.seekBar.progress = 0
+                viewInitializer.currentTime.text = formatTime(0)
+                viewInitializer.totalTime.text = formatTime(audioTrackManager.getTotalDuration())
             }
         }
 
@@ -58,6 +72,9 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
         // Set up listeners
         setupListeners()
+
+        // Start updating SeekBar
+        handler.post(updateSeekBarRunnable)
     }
 
     private fun loadAudioFiles() {
@@ -89,6 +106,19 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         findViewById<ImageView>(R.id.play_pause_button).setOnClickListener {
             togglePlayPause()
         }
+
+        // Set up SeekBar listener
+        viewInitializer.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    audioTrackManager.seekTo(progress.toLong())
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar) {}
+        })
     }
 
     private fun togglePlayPause() {
@@ -126,6 +156,24 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         viewInitializer.playlistRecyclerView.requestLayout()
     }
 
+    private fun updateSeekBar() {
+        if (audioTrackManager.isPlaying || audioTrackManager.isPaused()) {
+            val currentPosition = audioTrackManager.getCurrentPosition()
+            val totalDuration = audioTrackManager.getTotalDuration() // Add this method to AudioTrackManager
+            viewInitializer.seekBar.max = totalDuration
+            viewInitializer.seekBar.progress = currentPosition
+            viewInitializer.currentTime.text = formatTime(currentPosition)
+            viewInitializer.totalTime.text = formatTime(totalDuration)
+        }
+    }
+
+    private fun formatTime(millis: Int): String {
+        val seconds = millis / 1000
+        val minutes = seconds / 60
+        val remainingSeconds = seconds % 60
+        return String.format("%02d:%02d", minutes, remainingSeconds)
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         permissionHandler.permissionManager.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -138,6 +186,11 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     override fun onPermissionsDenied() {
         Logger.logw("Permissions denied, exiting the app")
         finish()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(updateSeekBarRunnable)
     }
 }
 

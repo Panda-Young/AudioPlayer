@@ -149,6 +149,15 @@ class AudioTrackManager(private val sampleRate: Int) {
         }
     }
 
+    fun getTotalDuration(): Int {
+        return if (filePath == null) {
+            0
+        } else {
+            val wavFile = WavFile(File(filePath))
+            wavFile.getTotalDuration()
+        }
+    }
+
     fun isPaused(): Boolean {
         return isPaused
     }

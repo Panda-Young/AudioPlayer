@@ -165,4 +165,14 @@ class WavFile(private val file: File) {
     fun getDataStartOffset(): Int {
         return dataStartOffset
     }
+
+    fun getTotalDuration(): Int {
+        // Calculate total duration in milliseconds
+        return if (dataSize == 0 || sampleRate == 0) {
+            0
+        } else {
+            // Formula: (dataSize * 1000) / (sampleRate * channels * (bitDepth / 8))
+            (dataSize * 1000 / (sampleRate * channels * (bitDepth / 8))).toInt()
+        }
+    }
 }
