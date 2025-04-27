@@ -1,4 +1,4 @@
-package com.panda.audioplayer
+package com.panda.audioplayer.utils
 
 import java.io.File
 import java.io.FileInputStream
@@ -160,5 +160,9 @@ class WavFile(private val file: File) {
 
     fun getFile(): File {
         return file
+    }
+
+    fun getDataStartOffset(): Int {
+        return dataStartOffset
     }
 }

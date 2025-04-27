@@ -21,6 +21,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     private lateinit var viewInitializer: ViewInitializer
     private lateinit var permissionHandler: PermissionHandler
     private lateinit var audioManager: AudioManager
+    private lateinit var audioTrackManager: AudioTrackManager
     private val playlist = mutableListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +33,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         viewInitializer = ViewInitializer(this)
         permissionHandler = PermissionHandler(this)
         audioManager = AudioManager(this)
+        audioTrackManager = AudioTrackManager(44100) // Initialize AudioTrackManager with sample rate
 
         // Initialize views
         viewInitializer.initializeViews()
@@ -72,6 +74,25 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
         findViewById<ImageView>(R.id.playlist_button).setOnClickListener {
             togglePlaylistVisibility()
+        }
+
+        // Set up play/pause button listener
+        findViewById<ImageView>(R.id.play_pause_button).setOnClickListener {
+            togglePlayPause()
+        }
+    }
+
+    private fun togglePlayPause() {
+        val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
+        if (audioTrackManager.isPlaying) {
+            audioTrackManager.pausePlay()
+            playPauseButton.setImageResource(R.drawable.ic_play) // 切换到播放图标
+            Logger.logi("Audio paused")
+        } else {
+            val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
+            audioTrackManager.startPlay(selectedFilePath)
+            playPauseButton.setImageResource(R.drawable.ic_pause) // 切换到暂停图标
+            Logger.logi("Audio started playing")
         }
     }
 

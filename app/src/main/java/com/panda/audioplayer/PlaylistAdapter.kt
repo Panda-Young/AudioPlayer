@@ -70,4 +70,8 @@ class PlaylistAdapter(
         notifyItemChanged(previousSelected)
         notifyItemChanged(selectedPosition)
     }
+
+    fun getSelectedPosition(): Int {
+        return selectedPosition
+    }
 }
