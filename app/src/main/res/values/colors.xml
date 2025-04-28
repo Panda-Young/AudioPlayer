@@ -5,5 +5,6 @@
     <color name="default_text_color">#000000</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
-    <color name="playlist_background">#F5F5F5</color>
+    <color name="playlist_background_light">#FFFFFF</color>
+    <color name="text_color_primary_light">#000000</color>
 </resources>

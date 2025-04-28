@@ -1,5 +1,7 @@
 package com.panda.audioplayer
 
+import android.content.Context
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -40,12 +42,20 @@ class PlaylistAdapter(
         }
         // Highlight the selected item
         holder.itemView.isSelected = selectedPosition == position
-        // Change text color based on selection
+        // Change text color based on selection using theme attributes
         if (selectedPosition == position) {
             holder.audioFileName.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.highlight_color))
         } else {
-            holder.audioFileName.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.default_text_color))
+            val textColorPrimary = resolveColorAttribute(holder.itemView.context, R.attr.text_color_primary)
+            holder.audioFileName.setTextColor(textColorPrimary)
         }
+    }
+
+    // Helper function to resolve theme attribute colors
+    private fun resolveColorAttribute(context: Context, attr: Int): Int {
+        val typedValue = TypedValue()
+        context.theme.resolveAttribute(attr, typedValue, true)
+        return typedValue.data
     }
 
     override fun getItemCount(): Int {

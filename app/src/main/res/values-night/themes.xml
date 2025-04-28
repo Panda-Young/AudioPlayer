@@ -3,5 +3,7 @@
     <style name="Base.Theme.AudioPlayer" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="playlist_background">@color/playlist_background_dark</item>
+        <item name="text_color_primary">@color/text_color_primary_dark</item>
     </style>
 </resources>
