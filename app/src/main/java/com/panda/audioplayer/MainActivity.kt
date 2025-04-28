@@ -135,6 +135,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
         titleTextView.text = wavFile.getAudioTitle()
         artistTextView.text = wavFile.getArtist()
+        viewInitializer.seekBar.max = totalDuration
         viewInitializer.totalTime.text = formatTime(totalDuration)
     }
 
@@ -175,8 +176,6 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     private fun updateSeekBar() {
         if (audioTrackManager.isPlaying || audioTrackManager.isPaused()) {
             val currentPosition = audioTrackManager.getCurrentPosition()
-            val totalDuration = audioTrackManager.getTotalDuration() // Add this method to AudioTrackManager
-            viewInitializer.seekBar.max = totalDuration
             viewInitializer.seekBar.progress = currentPosition
             viewInitializer.currentTime.text = formatTime(currentPosition)
         }

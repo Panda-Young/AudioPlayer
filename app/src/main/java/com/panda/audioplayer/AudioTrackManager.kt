@@ -150,18 +150,6 @@ class AudioTrackManager(private val sampleRate: Int) {
         }
     }
 
-    fun getTotalDuration(): Int {
-        return if (filePath == null) {
-            0
-        } else {
-            // val wavFile = WavFile(File(filePath))
-            // wavFile.getTotalDuration()
-            val totalDuration = ((audioFileLength - positionOffset) / (sampleRate / 1000 * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1))).toInt()
-            Logger.logd("Total duration: $totalDuration")
-            totalDuration
-        }
-    }
-
     fun isPaused(): Boolean {
         return isPaused
     }
