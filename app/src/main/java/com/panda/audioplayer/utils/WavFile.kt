@@ -236,4 +236,8 @@ class WavFile(private val file: File) {
             (dataSize / (sampleRate / 1000 * channels * (bitDepth / 8))).toInt()
         }
     }
+
+    fun getAudioDataSize(): Int {
+        return dataSize
+    }
 }
