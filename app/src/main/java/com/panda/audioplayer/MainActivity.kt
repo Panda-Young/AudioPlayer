@@ -141,14 +141,21 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
     private fun togglePlayPause() {
         val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
+        val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
+
         if (audioTrackManager.isPlaying) {
             audioTrackManager.pausePlay()
-            playPauseButton.setImageResource(R.drawable.ic_play) // Switch to play icon
+            playPauseButton.setImageResource(R.drawable.ic_play)
             Logger.logi("Audio paused")
         } else {
-            val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
-            audioTrackManager.startPlay(selectedFilePath)
-            playPauseButton.setImageResource(R.drawable.ic_pause) // Switch to pause icon
+            if (audioTrackManager.isSameAudioFile(selectedFilePath)) {
+                audioTrackManager.resumePlay()
+                Logger.logi("Resuming playback from paused position")
+            } else {
+                audioTrackManager.startPlay(selectedFilePath)
+                Logger.logi("Starting playback of new audio file: $selectedFilePath")
+            }
+            playPauseButton.setImageResource(R.drawable.ic_pause)
         }
     }
 

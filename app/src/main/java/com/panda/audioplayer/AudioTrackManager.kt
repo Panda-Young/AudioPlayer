@@ -48,7 +48,7 @@ class AudioTrackManager(private val sampleRate: Int) {
             .build()
     }
 
-    fun startPlay(filePath: String) {
+    fun startPlay(filePath: String, resume: Boolean = false) {
         try {
             stopPlay()
             this.filePath = filePath
@@ -60,12 +60,18 @@ class AudioTrackManager(private val sampleRate: Int) {
 
             isPlaying = true
             isPaused = false
+
+            if (resume) {
+                audioFile?.seek(pauseOffset)
+            } else {
+                audioFile?.seek(positionOffset)
+            }
+
             audioTrack?.play()
 
             Thread {
                 try {
                     val buffer = ByteArray(bufferSize)
-                    audioFile?.seek(positionOffset)
                     while (isPlaying && audioFile?.filePointer ?: 0 < audioFileLength) {
                         val read = audioFile?.read(buffer) ?: 0
                         if (read > 0) {
@@ -74,8 +80,6 @@ class AudioTrackManager(private val sampleRate: Int) {
 
                         if (isPaused) {
                             pauseOffset = audioFile?.filePointer ?: 0
-                            positionOffset = pauseOffset
-                            flagJump = true
                             audioTrack?.pause()
                             break
                         }
@@ -109,12 +113,15 @@ class AudioTrackManager(private val sampleRate: Int) {
             isPaused = true
             isPlaying = false
             audioTrack?.pause()
+            pauseOffset = audioFile?.filePointer ?: 0
         }
     }
 
     fun resumePlay() {
         if (isPaused) {
-            filePath?.let { startPlay(it) }
+            filePath?.let {
+                startPlay(it, resume = true)
+            }
         }
     }
 
@@ -137,7 +144,7 @@ class AudioTrackManager(private val sampleRate: Int) {
     }
 
     fun getCurrentPosition(): Int {
-        return if (audioFile == null || !isPlaying) {
+        return if (audioFile == null) {
             0
         } else {
             try {
@@ -157,5 +164,9 @@ class AudioTrackManager(private val sampleRate: Int) {
     fun release() {
         stopPlay()
         audioTrack?.release()
+    }
+
+    fun isSameAudioFile(newFilePath: String?): Boolean {
+        return filePath == newFilePath
     }
 }
