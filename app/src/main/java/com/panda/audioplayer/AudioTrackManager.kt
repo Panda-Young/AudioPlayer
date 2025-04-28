@@ -142,7 +142,7 @@ class AudioTrackManager(private val sampleRate: Int) {
         } else {
             try {
                 val currentPosition = if (isPaused) pauseOffset else audioFile?.filePointer ?: 0
-                ((currentPosition) * 1000 / (sampleRate * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1))).toInt()
+                (currentPosition / (sampleRate / 1000 * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1))).toInt()
             } catch (e: IOException) {
                 Logger.loge("Error getting current position: ${e.message}")
                 0
@@ -156,7 +156,9 @@ class AudioTrackManager(private val sampleRate: Int) {
         } else {
             // val wavFile = WavFile(File(filePath))
             // wavFile.getTotalDuration()
-            ((audioFileLength - positionOffset) * 1000 / (sampleRate * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1))).toInt()
+            val totalDuration = ((audioFileLength - positionOffset) / (sampleRate / 1000 * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1))).toInt()
+            Logger.logd("Total duration: $totalDuration")
+            totalDuration
         }
     }
 

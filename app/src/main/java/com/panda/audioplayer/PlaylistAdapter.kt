@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
+import com.panda.audioplayer.utils.Logger
 
 class PlaylistAdapter(
     private var playlist: MutableList<String>,
@@ -37,6 +38,7 @@ class PlaylistAdapter(
             onRemoveClickListener(audioFilePath)
         }
         holder.itemView.setOnClickListener {
+            Logger.logd("Selected file path: $audioFilePath")
             onItemClickListener?.invoke(audioFilePath)
             setSelectedPosition(position)
         }

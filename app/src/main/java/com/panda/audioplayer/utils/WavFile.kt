@@ -233,8 +233,7 @@ class WavFile(private val file: File) {
         return if (dataSize == 0 || sampleRate == 0) {
             0
         } else {
-            // Formula: (dataSize * 1000) / (sampleRate * channels * (bitDepth / 8))
-            (dataSize * 1000 / (sampleRate * channels * (bitDepth / 8))).toInt()
+            (dataSize / (sampleRate / 1000 * channels * (bitDepth / 8))).toInt()
         }
     }
 }

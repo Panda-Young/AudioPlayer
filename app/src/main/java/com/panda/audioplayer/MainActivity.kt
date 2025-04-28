@@ -55,7 +55,6 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
                 // Reset the SeekBar and time labels
                 viewInitializer.seekBar.progress = 0
                 viewInitializer.currentTime.text = formatTime(0)
-                viewInitializer.totalTime.text = formatTime(audioTrackManager.getTotalDuration())
             }
         }
 
@@ -132,9 +131,11 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     private fun updateAudioInfo(wavFile: WavFile) {
         val titleTextView = findViewById<TextView>(R.id.audio_title) // Add this TextView in your layout
         val artistTextView = findViewById<TextView>(R.id.audio_artist) // Add this TextView in your layout
+        val totalDuration = wavFile.getTotalDuration()
 
         titleTextView.text = wavFile.getAudioTitle()
         artistTextView.text = wavFile.getArtist()
+        viewInitializer.totalTime.text = formatTime(totalDuration)
     }
 
     private fun togglePlayPause() {
@@ -178,7 +179,6 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
             viewInitializer.seekBar.max = totalDuration
             viewInitializer.seekBar.progress = currentPosition
             viewInitializer.currentTime.text = formatTime(currentPosition)
-            viewInitializer.totalTime.text = formatTime(totalDuration)
         }
     }
 
