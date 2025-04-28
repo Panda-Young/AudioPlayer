@@ -132,10 +132,29 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
         // Set up playlist item click listener
         viewInitializer.playlistAdapter.setOnItemClickListener { filePath ->
-            val wavFile = WavFile(File(filePath))
-            initializeAudioTrackManager(wavFile.getSampleRate()) // Initialize with the correct sample rate
-            updateAudioInfo(wavFile)
+            switchToNewAudio(filePath)
         }
+    }
+
+    private fun switchToNewAudio(filePath: String) {
+        // Stop the current audio if it's playing
+        if (::audioTrackManager.isInitialized && audioTrackManager.isPlaying) {
+            audioTrackManager.stopPlay()
+        }
+
+        // Initialize the new audio track manager with the new file's sample rate
+        val wavFile = WavFile(File(filePath))
+        initializeAudioTrackManager(wavFile.getSampleRate())
+
+        // Start playing the new audio from the beginning
+        audioTrackManager.startPlay(filePath)
+
+        // Update the UI with the new audio's information
+        updateAudioInfo(wavFile)
+
+        // Update the play/pause button icon to pause
+        val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
+        playPauseButton.setImageResource(R.drawable.ic_pause)
     }
 
     private fun updateAudioInfo(wavFile: WavFile) {
@@ -165,7 +184,6 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
                 Logger.logi("Resuming playback from paused position")
             } else {
                 audioTrackManager.startPlay(selectedFilePath)
-                Logger.logi("Starting playback of new audio file: $selectedFilePath")
             }
             playPauseButton.setImageResource(R.drawable.ic_pause)
         }
