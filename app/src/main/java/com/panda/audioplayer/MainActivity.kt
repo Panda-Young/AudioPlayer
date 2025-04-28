@@ -147,7 +147,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         initializeAudioTrackManager(wavFile.getSampleRate())
 
         // Start playing the new audio from the beginning
-        audioTrackManager.startPlay(filePath)
+        audioTrackManager.startPlay(filePath, wavFile)
 
         // Update the UI with the new audio's information
         updateAudioInfo(wavFile)

@@ -7,6 +7,7 @@ import com.panda.audioplayer.utils.Logger
 
 class WavFile(private val file: File) {
 
+    private var parsed = false
     private var sampleRate = 44100 // Default sample rate
     private var channels = 2 // Default stereo
     private var bitDepth = 16 // Default bit depth
@@ -21,6 +22,8 @@ class WavFile(private val file: File) {
     }
 
     private fun parseWavHeader() {
+        if (parsed) return // If already parsed, return directly
+        parsed = true
         try {
             FileInputStream(file).use { fis ->
                 // Read the first 12 bytes to check RIFF and WAVE identifiers

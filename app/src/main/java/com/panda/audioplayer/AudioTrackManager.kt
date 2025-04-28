@@ -49,14 +49,14 @@ class AudioTrackManager(private val sampleRate: Int) {
             .build()
     }
 
-    fun startPlay(filePath: String, resume: Boolean = false) {
+fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = false) {
         try {
             stopPlay()
             this.filePath = filePath
             audioFile = RandomAccessFile(filePath, "r")
             Logger.logi("Audio started playing $filePath")
-            val wavFile = WavFile(File(filePath))
-            positionOffset = wavFile.getDataStartOffset().toLong()
+            val wav = wavFile ?: WavFile(File(filePath))
+            positionOffset = wav.getDataStartOffset().toLong()
             audioFileLength = audioFile?.length() ?: 0
 
             isPlaying = true
@@ -90,6 +90,7 @@ class AudioTrackManager(private val sampleRate: Int) {
                         isPlaying = false
                         isCompleted = true
                         onPlaybackComplete?.invoke()
+                        Logger.logi("Audio playback completed")
                     }
                 } catch (e: IOException) {
                     Logger.loge("Error during playback: ${e.message}")
