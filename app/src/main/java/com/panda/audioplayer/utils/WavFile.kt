@@ -12,7 +12,9 @@ class WavFile(private val file: File) {
     private var bitDepth = 0
     private var dataSize = 0
     private var dataStartOffset = 0
-    private var audioFormat = 0 // Add this variable
+    private var audioFormat = 0
+    private var audioTitle: String? = null
+    private var artist: String? = null
 
     init {
         parseWavHeader()
@@ -52,55 +54,33 @@ class WavFile(private val file: File) {
 
                     when (chunkId) {
                         "fmt " -> {
-                            // Allocate fmtData based on the chunk size
+                            // Parse the fmt chunk
                             val fmtData = ByteArray(chunkSize)
-                            fis.read(fmtData, 0, chunkSize) // Read the entire fmt chunk
-
-                            // Parse the fmt chunk data
-                            audioFormat = fmtData[0].toInt() and 0xFF or (fmtData[1].toInt() and 0xFF shl 8)
-                            if (audioFormat == 0xFFFE) {
-                                // Parse the extra_info_chunk_t structure for extensible format
-                                val cbSize = fmtData[16].toInt() and 0xFF or (fmtData[17].toInt() and 0xFF shl 8)
-                                val validBits = fmtData[18].toInt() and 0xFF or (fmtData[19].toInt() and 0xFF shl 8)
-                                val channelMask = fmtData[20].toInt() and 0xFF or
-                                        (fmtData[21].toInt() and 0xFF shl 8) or
-                                        (fmtData[22].toInt() and 0xFF shl 16) or
-                                        (fmtData[23].toInt() and 0xFF shl 24)
-                                val subFormat = ByteArray(16)
-                                System.arraycopy(fmtData, 24, subFormat, 0, 16) // Copy the 16-byte sub format GUID
-
-                                // Parse the sub format GUID to determine the actual audio format
-                                val actualFormat = subFormat[0].toInt() and 0xFF or (subFormat[1].toInt() and 0xFF shl 8)
-                                if (actualFormat != 1 && actualFormat != 3) { // Support PCM (1) and IEEE Float (3)
-                                    Logger.logw("Unsupported WAV sub format: actualFormat=$actualFormat. Only PCM (1) and IEEE Float (3) are supported")
-                                    throw IOException("Unsupported WAV sub format: only PCM and IEEE Float are supported")
-                                }
-                                audioFormat = actualFormat
-                            } else if (audioFormat != 1 && audioFormat != 3) { // Support PCM (1) and IEEE Float (3)
-                                Logger.logw("Unsupported WAV format: audioFormat=$audioFormat. Only PCM (1) and IEEE Float (3) are supported")
-                                throw IOException("Unsupported WAV format: only PCM and IEEE Float are supported")
-                            }
-
-                            channels = fmtData[2].toInt() and 0xFF or (fmtData[3].toInt() and 0xFF shl 8)
-                            sampleRate = fmtData[4].toInt() and 0xFF or
-                                    (fmtData[5].toInt() and 0xFF shl 8) or
-                                    (fmtData[6].toInt() and 0xFF shl 16) or
-                                    (fmtData[7].toInt() and 0xFF shl 24)
-                            bitDepth = fmtData[14].toInt() and 0xFF or (fmtData[15].toInt() and 0xFF shl 8)
+                            fis.read(fmtData, 0, chunkSize)
+                            parseFmtChunk(fmtData)
                             fmtChunkFound = true
-                            Logger.logd("Parsed WAV header: audioFormat=$audioFormat, channels=$channels, sampleRate=$sampleRate, bitDepth=$bitDepth")
                         }
                         "data" -> {
                             // Parse data chunk
                             dataSize = chunkSize
                             dataStartOffset = fis.channel.position().toInt()
                             dataChunkFound = true
-
-                            // Skip the data chunk content (we only need its size and offset)
                             fis.skip(chunkSize.toLong())
                         }
+                        "LIST" -> {
+                            // Parse LIST chunk
+                            val listData = ByteArray(chunkSize)
+                            fis.read(listData, 0, chunkSize)
+                            parseListChunk(listData)
+                        }
+                        "INFO" -> {
+                            // Parse INFO chunk
+                            val infoData = ByteArray(chunkSize)
+                            fis.read(infoData, 0, chunkSize)
+                            parseInfoChunk(infoData)
+                        }
                         else -> {
-                            // Skip unknown chunks (e.g., JUNK, FLLR, etc.)
+                            // Skip unknown chunks
                             fis.skip(chunkSize.toLong())
                         }
                     }
@@ -120,6 +100,87 @@ class WavFile(private val file: File) {
             Logger.loge("Error parsing WAV file header: ${e.message}")
             e.printStackTrace()
         }
+    }
+
+    private fun parseFmtChunk(fmtData: ByteArray) {
+        audioFormat = fmtData[0].toInt() and 0xFF or (fmtData[1].toInt() and 0xFF shl 8)
+        if (audioFormat == 0xFFFE) {
+            // Parse extensible format
+            val cbSize = fmtData[16].toInt() and 0xFF or (fmtData[17].toInt() and 0xFF shl 8)
+            val validBits = fmtData[18].toInt() and 0xFF or (fmtData[19].toInt() and 0xFF shl 8)
+            val channelMask = fmtData[20].toInt() and 0xFF or
+                    (fmtData[21].toInt() and 0xFF shl 8) or
+                    (fmtData[22].toInt() and 0xFF shl 16) or
+                    (fmtData[23].toInt() and 0xFF shl 24)
+            val subFormat = ByteArray(16)
+            System.arraycopy(fmtData, 24, subFormat, 0, 16)
+            val actualFormat = subFormat[0].toInt() and 0xFF or (subFormat[1].toInt() and 0xFF shl 8)
+            if (actualFormat != 1 && actualFormat != 3) {
+                Logger.logw("Unsupported WAV sub format: actualFormat=$actualFormat. Only PCM (1) and IEEE Float (3) are supported")
+                throw IOException("Unsupported WAV sub format: only PCM and IEEE Float are supported")
+            }
+            audioFormat = actualFormat
+        } else if (audioFormat != 1 && audioFormat != 3) {
+            Logger.logw("Unsupported WAV format: audioFormat=$audioFormat. Only PCM (1) and IEEE Float (3) are supported")
+            throw IOException("Unsupported WAV format: only PCM and IEEE Float are supported")
+        }
+
+        channels = fmtData[2].toInt() and 0xFF or (fmtData[3].toInt() and 0xFF shl 8)
+        sampleRate = fmtData[4].toInt() and 0xFF or
+                (fmtData[5].toInt() and 0xFF shl 8) or
+                (fmtData[6].toInt() and 0xFF shl 16) or
+                (fmtData[7].toInt() and 0xFF shl 24)
+        bitDepth = fmtData[14].toInt() and 0xFF or (fmtData[15].toInt() and 0xFF shl 8)
+        Logger.logd("Parsed WAV header: audioFormat=$audioFormat, channels=$channels, sampleRate=$sampleRate, bitDepth=$bitDepth")
+    }
+
+    private fun parseListChunk(listData: ByteArray) {
+        val listType = String(listData, 0, 4)
+        if (listType == "INFO") {
+            var offset = 4
+            while (offset < listData.size) {
+                val subChunkId = String(listData, offset, 4)
+                val subChunkSize = listData[offset + 4].toInt() and 0xFF or
+                        (listData[offset + 5].toInt() and 0xFF shl 8) or
+                        (listData[offset + 6].toInt() and 0xFF shl 16) or
+                        (listData[offset + 7].toInt() and 0xFF shl 24)
+                offset += 8
+
+                val subChunkData = String(listData, offset, subChunkSize)
+                when (subChunkId) {
+                    "INAM" -> audioTitle = subChunkData // Title
+                    "IART" -> artist = subChunkData // Artist
+                }
+                offset += subChunkSize
+            }
+        }
+    }
+
+    private fun parseInfoChunk(infoData: ByteArray) {
+        var offset = 0
+        while (offset < infoData.size) {
+            val subChunkId = String(infoData, offset, 4)
+            val subChunkSize = infoData[offset + 4].toInt() and 0xFF or
+                    (infoData[offset + 5].toInt() and 0xFF shl 8) or
+                    (infoData[offset + 6].toInt() and 0xFF shl 16) or
+                    (infoData[offset + 7].toInt() and 0xFF shl 24)
+            offset += 8
+
+            val subChunkData = String(infoData, offset, subChunkSize)
+            when (subChunkId) {
+                "INAM" -> audioTitle = subChunkData // Title
+                "IART" -> artist = subChunkData // Artist
+            }
+            offset += subChunkSize
+        }
+    }
+
+    fun getAudioTitle(): String {
+        return audioTitle ?: file.nameWithoutExtension
+    }
+
+    fun getArtist(): String {
+        return artist ?: "Unknown Artist"
     }
 
     fun ByteArray.toHexString(): String {

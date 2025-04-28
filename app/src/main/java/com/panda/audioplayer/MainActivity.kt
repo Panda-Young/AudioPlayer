@@ -16,8 +16,10 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.panda.audioplayer.permission.PermissionManager
 import com.panda.audioplayer.utils.Logger
+import com.panda.audioplayer.utils.WavFile
 import androidx.core.view.isVisible
 import android.content.Context
+import java.io.File
 
 class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
@@ -119,6 +121,20 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {}
         })
+
+        // Set up playlist item click listener
+        viewInitializer.playlistAdapter.setOnItemClickListener { filePath ->
+            val wavFile = WavFile(File(filePath))
+            updateAudioInfo(wavFile)
+        }
+    }
+
+    private fun updateAudioInfo(wavFile: WavFile) {
+        val titleTextView = findViewById<TextView>(R.id.audio_title) // Add this TextView in your layout
+        val artistTextView = findViewById<TextView>(R.id.audio_artist) // Add this TextView in your layout
+
+        titleTextView.text = wavFile.getAudioTitle()
+        artistTextView.text = wavFile.getArtist()
     }
 
     private fun togglePlayPause() {
