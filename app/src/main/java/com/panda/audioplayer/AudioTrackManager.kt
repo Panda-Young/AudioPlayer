@@ -5,6 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import com.panda.audioplayer.utils.Logger
 import com.panda.audioplayer.utils.WavFile
+import com.panda.audioplayer.utils.AudioDataConverter
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -59,6 +60,10 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
             positionOffset = wav.getDataStartOffset().toLong()
             audioFileLength = audioFile?.length() ?: 0
 
+            if (wav.getBitDepth() == 24) {
+                Logger.loge("24-bit audio source is not currently supported：${wav.getFileName()}")
+            }
+
             isPlaying = true
             isPaused = false
             isCompleted = false
@@ -77,7 +82,18 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
                     while (isPlaying && audioFile?.filePointer ?: 0 < audioFileLength) {
                         val read = audioFile?.read(buffer) ?: 0
                         if (read > 0) {
-                            audioTrack?.write(buffer, 0, read)
+                            val convertedBuffer = when (wav.getBitDepth()) {
+                                8 -> AudioDataConverter.convert8BitTo16Bit(buffer)
+                                32 -> {
+                                    when (wav.getAudioFormat()) {
+                                        1 -> AudioDataConverter.convert32BitIntTo16Bit(buffer) // 32-bit int
+                                        3 -> AudioDataConverter.convert32BitFloatTo16Bit(buffer) // 32-bit float
+                                        else -> buffer // use raw data
+                                    }
+                                }
+                                else -> buffer // use raw data
+                            }
+                            audioTrack?.write(convertedBuffer, 0, convertedBuffer.size)
                         }
 
                         if (isPaused) {
