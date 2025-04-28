@@ -31,7 +31,9 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     private val handler = Handler(Looper.getMainLooper())
     private val updateSeekBarRunnable = object : Runnable {
         override fun run() {
-            updateSeekBar()
+            if (::audioTrackManager.isInitialized) { // Check if audioTrackManager is initialized
+                updateSeekBar()
+            }
             handler.postDelayed(this, 1000) // Update every second
         }
     }
@@ -45,18 +47,6 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         viewInitializer = ViewInitializer(this)
         permissionHandler = PermissionHandler(this)
         audioManager = AudioManager(this)
-        audioTrackManager = AudioTrackManager(44100) // Initialize AudioTrackManager with sample rate
-
-        audioTrackManager.onPlaybackComplete = {
-            runOnUiThread {
-                val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
-                playPauseButton.setImageResource(R.drawable.ic_play) // Switch to play icon
-
-                // Reset the SeekBar and time labels
-                viewInitializer.seekBar.progress = 0
-                viewInitializer.currentTime.text = formatTime(0)
-            }
-        }
 
         // Initialize views
         viewInitializer.initializeViews()
@@ -74,8 +64,13 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         // Set up listeners
         setupListeners()
 
-        // Start updating SeekBar
-        handler.post(updateSeekBarRunnable)
+        // Start updating SeekBar only after audioTrackManager is initialized
+        if (playlist.isNotEmpty()) {
+            val initialFilePath = playlist[0]
+            val wavFile = WavFile(File(initialFilePath))
+            initializeAudioTrackManager(wavFile.getSampleRate())
+            handler.post(updateSeekBarRunnable)
+        }
     }
 
     private fun loadAudioFiles() {
@@ -84,6 +79,20 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         viewInitializer.playlistAdapter.notifyDataSetChanged()
         if (playlist.isNotEmpty()) {
             viewInitializer.playlistAdapter.setSelectedPosition(0)
+        }
+    }
+
+    private fun initializeAudioTrackManager(sampleRate: Int) {
+        audioTrackManager = AudioTrackManager(sampleRate)
+        audioTrackManager.onPlaybackComplete = {
+            runOnUiThread {
+                val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
+                playPauseButton.setImageResource(R.drawable.ic_play) // Switch to play icon
+
+                // Reset the SeekBar and time labels
+                viewInitializer.seekBar.progress = 0
+                viewInitializer.currentTime.text = formatTime(0)
+            }
         }
     }
 
@@ -111,7 +120,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         // Set up SeekBar listener
         viewInitializer.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
+                if (fromUser && ::audioTrackManager.isInitialized) { // Check if audioTrackManager is initialized
                     audioTrackManager.seekTo(progress.toLong())
                 }
             }
@@ -124,13 +133,14 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         // Set up playlist item click listener
         viewInitializer.playlistAdapter.setOnItemClickListener { filePath ->
             val wavFile = WavFile(File(filePath))
+            initializeAudioTrackManager(wavFile.getSampleRate()) // Initialize with the correct sample rate
             updateAudioInfo(wavFile)
         }
     }
 
     private fun updateAudioInfo(wavFile: WavFile) {
-        val titleTextView = findViewById<TextView>(R.id.audio_title) // Add this TextView in your layout
-        val artistTextView = findViewById<TextView>(R.id.audio_artist) // Add this TextView in your layout
+        val titleTextView = findViewById<TextView>(R.id.audio_title)
+        val artistTextView = findViewById<TextView>(R.id.audio_artist)
         val totalDuration = wavFile.getTotalDuration()
 
         titleTextView.text = wavFile.getAudioTitle()
@@ -140,6 +150,8 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     private fun togglePlayPause() {
+        if (!::audioTrackManager.isInitialized) return // Check if audioTrackManager is initialized
+
         val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
         val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
 
@@ -181,7 +193,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     private fun updateSeekBar() {
-        if (audioTrackManager.isPlaying || audioTrackManager.isPaused()) {
+        if (::audioTrackManager.isInitialized && (audioTrackManager.isPlaying || audioTrackManager.isPaused())) {
             val currentPosition = audioTrackManager.getCurrentPosition()
             viewInitializer.seekBar.progress = currentPosition
             viewInitializer.currentTime.text = formatTime(currentPosition)

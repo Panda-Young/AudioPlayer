@@ -7,12 +7,12 @@ import com.panda.audioplayer.utils.Logger
 
 class WavFile(private val file: File) {
 
-    private var sampleRate = 0
-    private var channels = 0
-    private var bitDepth = 0
+    private var sampleRate = 44100 // Default sample rate
+    private var channels = 2 // Default stereo
+    private var bitDepth = 16 // Default bit depth
     private var dataSize = 0
     private var dataStartOffset = 0
-    private var audioFormat = 0
+    private var audioFormat = 1 // Default PCM format
     private var audioTitle: String? = null
     private var artist: String? = null
 
