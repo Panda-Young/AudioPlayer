@@ -46,9 +46,7 @@ class PlaylistAdapter(
         }
 
         // Get or create WavFile instance from cache
-        val wavFile = wavFileCache.getOrPut(audioFilePath) { WavFile(File(audioFilePath)) }
-        // Use wavFile to get audio info (e.g., title, artist)
-        holder.audioFileName.text = wavFile.getAudioTitle()
+        wavFileCache.getOrPut(audioFilePath) { WavFile(File(audioFilePath)) }
 
         // Highlight the selected item
         holder.itemView.isSelected = selectedPosition == position
