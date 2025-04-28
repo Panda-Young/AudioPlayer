@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
             val initialFilePath = playlist[0]
             val wavFile = WavFile(File(initialFilePath))
             initializeAudioTrackManager(wavFile.getSampleRate())
+            updateAudioInfo(wavFile)
             handler.post(updateSeekBarRunnable)
         }
     }
