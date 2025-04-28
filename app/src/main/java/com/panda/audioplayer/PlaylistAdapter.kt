@@ -38,7 +38,7 @@ class PlaylistAdapter(
             onRemoveClickListener(audioFilePath)
         }
         holder.itemView.setOnClickListener {
-            Logger.logd("Selected file path: $audioFilePath")
+            Logger.logi("Selected file path: $audioFilePath")
             onItemClickListener?.invoke(audioFilePath)
             setSelectedPosition(position)
         }

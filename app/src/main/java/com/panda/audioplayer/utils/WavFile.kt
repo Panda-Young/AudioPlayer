@@ -37,7 +37,7 @@ class WavFile(private val file: File) {
                 var dataChunkFound = false
 
                 // Loop through chunks until both fmt and data chunks are found
-                while (!fmtChunkFound || !dataChunkFound) {
+                while (fis.available() > 0) {
                     // Read the chunk header (8 bytes: 4 bytes for chunk ID + 4 bytes for chunk size)
                     val chunkHeader = ByteArray(8)
                     if (fis.read(chunkHeader) != 8) {
@@ -45,12 +45,15 @@ class WavFile(private val file: File) {
                     }
 
                     val chunkId = String(chunkHeader, 0, 4)
-                    val chunkSize = chunkHeader[4].toInt() and 0xFF or
+                    var chunkSize = chunkHeader[4].toInt() and 0xFF or
                             (chunkHeader[5].toInt() and 0xFF shl 8) or
                             (chunkHeader[6].toInt() and 0xFF shl 16) or
                             (chunkHeader[7].toInt() and 0xFF shl 24)
+                    if (chunkSize % 2 == 1) {
+                        chunkSize++ // Ensure chunk size is even
+                    }
 
-                    Logger.logd("Parsing chunk: id=$chunkId, size=$chunkSize")
+                    Logger.logi("Parsing chunk: id=$chunkId, size=$chunkSize")
 
                     when (chunkId) {
                         "fmt " -> {
@@ -131,27 +134,57 @@ class WavFile(private val file: File) {
                 (fmtData[6].toInt() and 0xFF shl 16) or
                 (fmtData[7].toInt() and 0xFF shl 24)
         bitDepth = fmtData[14].toInt() and 0xFF or (fmtData[15].toInt() and 0xFF shl 8)
-        Logger.logd("Parsed WAV header: audioFormat=$audioFormat, channels=$channels, sampleRate=$sampleRate, bitDepth=$bitDepth")
+        Logger.logi("Parsed WAV header: audioFormat=$audioFormat, channels=$channels, sampleRate=$sampleRate, bitDepth=$bitDepth")
     }
 
     private fun parseListChunk(listData: ByteArray) {
-        val listType = String(listData, 0, 4)
+        val listType = String(listData, 0, 4, Charsets.UTF_8)
+        Logger.logd("Parsing LIST chunk: type=$listType, totalSize=${listData.size}")
         if (listType == "INFO") {
             var offset = 4
             while (offset < listData.size) {
-                val subChunkId = String(listData, offset, 4)
-                val subChunkSize = listData[offset + 4].toInt() and 0xFF or
-                        (listData[offset + 5].toInt() and 0xFF shl 8) or
-                        (listData[offset + 6].toInt() and 0xFF shl 16) or
-                        (listData[offset + 7].toInt() and 0xFF shl 24)
+                if (offset + 7 >= listData.size) {
+                    Logger.loge("Invalid listData: not enough bytes to read subChunkId and subChunkSize")
+                    break
+                }
+
+                val subChunkId = String(listData, offset, 4, Charsets.UTF_8)
+                val subChunkSize = (listData[offset + 4].toUByte().toInt()) or
+                                    (listData[offset + 5].toUByte().toInt() shl 8) or
+                                    (listData[offset + 6].toUByte().toInt() shl 16) or
+                                    (listData[offset + 7].toUByte().toInt() shl 24)
+                Logger.logd("Parsing subChunk: id=$subChunkId, size=$subChunkSize")
+
                 offset += 8
 
-                val subChunkData = String(listData, offset, subChunkSize)
-                when (subChunkId) {
-                    "INAM" -> audioTitle = subChunkData // Title
-                    "IART" -> artist = subChunkData // Artist
+                if (!subChunkId.all { it.isLetterOrDigit() }) {
+                    Logger.loge("Invalid subChunkId: $subChunkId, skipping chunk")
+                    offset += subChunkSize
+                    if (subChunkSize % 2 != 0) {
+                        offset += 1
+                    }
+                    continue
+                }
+
+                if (subChunkSize <= 0 || offset + subChunkSize > listData.size) {
+                    Logger.loge("Invalid subChunkSize: $subChunkSize, remaining bytes: ${listData.size - offset}")
+                    offset = listData.size
+                    continue
+                }
+
+                try {
+                    val subChunkData = String(listData, offset, subChunkSize, Charsets.UTF_8)
+                    when (subChunkId) {
+                        "INAM" -> audioTitle = subChunkData
+                        "IART" -> artist = subChunkData
+                    }
+                } catch (e: Exception) {
+                    Logger.loge("Failed to decode subChunkData for id=$subChunkId: ${e.message}")
                 }
                 offset += subChunkSize
+                if (subChunkSize % 2 != 0) {
+                    offset += 1
+                }
             }
         }
     }
@@ -181,10 +214,6 @@ class WavFile(private val file: File) {
 
     fun getArtist(): String {
         return artist ?: "Unknown Artist"
-    }
-
-    fun ByteArray.toHexString(): String {
-        return joinToString("") { "%02X".format(it) }
     }
 
     fun getAudioFormat(): Int {
