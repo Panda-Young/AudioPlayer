@@ -17,6 +17,7 @@ class AudioTrackManager(private val sampleRate: Int) {
     private var audioTrack: AudioTrack? = null
     private var audioFile: RandomAccessFile? = null
     internal var isPlaying = false
+    internal var isCompleted = false
     private var isPaused = false
     private var audioFileLength: Long = 0
     private var positionOffset: Long = 0
@@ -60,6 +61,7 @@ class AudioTrackManager(private val sampleRate: Int) {
 
             isPlaying = true
             isPaused = false
+            isCompleted = false
 
             if (resume) {
                 audioFile?.seek(pauseOffset)
@@ -86,6 +88,7 @@ class AudioTrackManager(private val sampleRate: Int) {
                     }
                     if (isPlaying && audioFile?.filePointer ?: 0 >= audioFileLength) {
                         isPlaying = false
+                        isCompleted = true
                         onPlaybackComplete?.invoke()
                     }
                 } catch (e: IOException) {

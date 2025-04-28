@@ -148,7 +148,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
             playPauseButton.setImageResource(R.drawable.ic_play)
             Logger.logi("Audio paused")
         } else {
-            if (audioTrackManager.isSameAudioFile(selectedFilePath)) {
+            if (audioTrackManager.isSameAudioFile(selectedFilePath) && !audioTrackManager.isCompleted) {
                 audioTrackManager.resumePlay()
                 Logger.logi("Resuming playback from paused position")
             } else {
