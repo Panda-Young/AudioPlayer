@@ -14,7 +14,7 @@ class AudioTrackManager(private val sampleRate: Int) {
 
     private val channelConfig = AudioFormat.CHANNEL_OUT_STEREO
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-    private val bufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+    private val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 3 // 3 for 24 bit pcm
     private var audioTrack: AudioTrack? = null
     private var audioFile: RandomAccessFile? = null
     internal var isPlaying = false
@@ -46,7 +46,7 @@ class AudioTrackManager(private val sampleRate: Int) {
                     .setEncoding(audioFormat)
                     .build()
             )
-            .setBufferSizeInBytes(bufferSize)
+            .setBufferSizeInBytes(minBufferSize)
             .build()
     }
 
@@ -59,10 +59,6 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
             val wav = wavFile ?: WavFile(File(filePath))
             positionOffset = wav.getDataStartOffset().toLong()
             audioFileLength = audioFile?.length() ?: 0
-
-            if (wav.getBitDepth() == 24) {
-                Logger.loge("24-bit audio source is not currently supported：${wav.getFileName()}")
-            }
 
             isPlaying = true
             isPaused = false
@@ -78,12 +74,13 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
 
             Thread {
                 try {
-                    val buffer = ByteArray(bufferSize)
+                    val buffer = ByteArray(minBufferSize)
                     while (isPlaying && audioFile?.filePointer ?: 0 < audioFileLength) {
                         val read = audioFile?.read(buffer) ?: 0
                         if (read > 0) {
                             val convertedBuffer = when (wav.getBitDepth()) {
                                 8 -> AudioDataConverter.convert8BitTo16Bit(buffer)
+                                24 -> AudioDataConverter.convert24BitTo16Bit(buffer)
                                 32 -> {
                                     when (wav.getAudioFormat()) {
                                         1 -> AudioDataConverter.convert32BitIntTo16Bit(buffer) // 32-bit int
