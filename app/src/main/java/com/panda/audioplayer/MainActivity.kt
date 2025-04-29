@@ -23,12 +23,20 @@ import java.io.File
 
 class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
+    // Define loop modes
+    enum class LoopMode {
+        REPEAT_ONE, // Repeat the current song
+        REPEAT_ALL, // Repeat the entire playlist
+        SHUFFLE     // Shuffle the playlist
+    }
+
     private lateinit var viewInitializer: ViewInitializer
     private lateinit var permissionHandler: PermissionHandler
     private lateinit var audioManager: AudioManager
     private lateinit var audioTrackManager: AudioTrackManager
     private val playlist = mutableListOf<String>()
     private val handler = Handler(Looper.getMainLooper())
+    private var currentLoopMode: LoopMode = LoopMode.REPEAT_ALL // Default to repeat all
     private val updateSeekBarRunnable = object : Runnable {
         override fun run() {
             if (::audioTrackManager.isInitialized) { // Check if audioTrackManager is initialized
@@ -87,12 +95,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         audioTrackManager = AudioTrackManager(sampleRate)
         audioTrackManager.onPlaybackComplete = {
             runOnUiThread {
-                val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
-                playPauseButton.setImageResource(R.drawable.ic_play) // Switch to play icon
-
-                // Reset the SeekBar and time labels
-                viewInitializer.seekBar.progress = 0
-                viewInitializer.currentTime.text = formatTime(0)
+                handlePlaybackCompletion()
             }
         }
     }
@@ -136,6 +139,58 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         // Set up playlist item click listener
         viewInitializer.playlistAdapter.setOnItemClickListener { filePath ->
             switchToNewAudio(filePath)
+        }
+
+        // Set up loop button listener
+        findViewById<ImageView>(R.id.loop_button).setOnClickListener {
+            toggleLoopMode()
+        }
+    }
+
+    // Toggle loop mode and update the icon
+    private fun toggleLoopMode() {
+        currentLoopMode = when (currentLoopMode) {
+            LoopMode.REPEAT_ONE -> LoopMode.REPEAT_ALL
+            LoopMode.REPEAT_ALL -> LoopMode.SHUFFLE
+            LoopMode.SHUFFLE -> LoopMode.REPEAT_ONE
+        }
+        updateLoopButtonIcon()
+        Logger.logi("Loop mode: $currentLoopMode")
+    }
+
+    // Update the loop button icon based on the current loop mode
+    private fun updateLoopButtonIcon() {
+        val loopButton = findViewById<ImageView>(R.id.loop_button)
+        when (currentLoopMode) {
+            LoopMode.REPEAT_ONE -> loopButton.setImageResource(R.drawable.ic_single_loop)
+            LoopMode.REPEAT_ALL -> loopButton.setImageResource(R.drawable.ic_list_loop)
+            LoopMode.SHUFFLE -> loopButton.setImageResource(R.drawable.ic_shuffle)
+        }
+    }
+
+
+    // Handle playback completion based on the current loop mode
+    private fun handlePlaybackCompletion() {
+        when (currentLoopMode) {
+            LoopMode.REPEAT_ONE -> {
+                // Restart the current song
+                val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
+                switchToNewAudio(selectedFilePath)
+            }
+            LoopMode.REPEAT_ALL -> {
+                // Move to the next song in the playlist
+                val nextPosition = (viewInitializer.playlistAdapter.getSelectedPosition() + 1) % playlist.size
+                viewInitializer.playlistAdapter.setSelectedPosition(nextPosition)
+                val nextFilePath = playlist[nextPosition]
+                switchToNewAudio(nextFilePath)
+            }
+            LoopMode.SHUFFLE -> {
+                // Play a random song from the playlist
+                val randomPosition = (0 until playlist.size).random()
+                viewInitializer.playlistAdapter.setSelectedPosition(randomPosition)
+                val randomFilePath = playlist[randomPosition]
+                switchToNewAudio(randomFilePath)
+            }
         }
     }
 
