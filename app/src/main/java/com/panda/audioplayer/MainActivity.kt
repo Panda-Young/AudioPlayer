@@ -145,6 +145,68 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         findViewById<ImageView>(R.id.loop_button).setOnClickListener {
             toggleLoopMode()
         }
+
+        // Set up previous button listener
+        findViewById<ImageView>(R.id.prev_button).setOnClickListener {
+            playPrevious()
+        }
+
+        // Set up next button listener
+        findViewById<ImageView>(R.id.next_button).setOnClickListener {
+            playNext()
+        }
+    }
+
+    // Play the previous song based on the current loop mode
+    private fun playPrevious() {
+        when (currentLoopMode) {
+            // LoopMode.REPEAT_ONE -> {
+            //     // Restart the current song
+            //     val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
+            //     switchToNewAudio(selectedFilePath)
+            // }
+            LoopMode.REPEAT_ONE, LoopMode.REPEAT_ALL -> {
+                // Move to the previous song in the playlist
+                val currentPosition = viewInitializer.playlistAdapter.getSelectedPosition()
+                val previousPosition = if (currentPosition - 1 < 0) playlist.size - 1 else currentPosition - 1
+                viewInitializer.playlistAdapter.setSelectedPosition(previousPosition)
+                val previousFilePath = playlist[previousPosition]
+                switchToNewAudio(previousFilePath)
+            }
+            LoopMode.SHUFFLE -> {
+                // Play a random song from the playlist
+                val randomPosition = (0 until playlist.size).random()
+                viewInitializer.playlistAdapter.setSelectedPosition(randomPosition)
+                val randomFilePath = playlist[randomPosition]
+                switchToNewAudio(randomFilePath)
+            }
+        }
+    }
+
+    // Play the next song based on the current loop mode
+    private fun playNext() {
+        when (currentLoopMode) {
+            // LoopMode.REPEAT_ONE -> {
+            //     // Restart the current song
+            //     val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
+            //     switchToNewAudio(selectedFilePath)
+            // }
+            LoopMode.REPEAT_ONE, LoopMode.REPEAT_ALL -> {
+                // Move to the next song in the playlist
+                val currentPosition = viewInitializer.playlistAdapter.getSelectedPosition()
+                val nextPosition = (currentPosition + 1) % playlist.size
+                viewInitializer.playlistAdapter.setSelectedPosition(nextPosition)
+                val nextFilePath = playlist[nextPosition]
+                switchToNewAudio(nextFilePath)
+            }
+            LoopMode.SHUFFLE -> {
+                // Play a random song from the playlist
+                val randomPosition = (0 until playlist.size).random()
+                viewInitializer.playlistAdapter.setSelectedPosition(randomPosition)
+                val randomFilePath = playlist[randomPosition]
+                switchToNewAudio(randomFilePath)
+            }
+        }
     }
 
     // Toggle loop mode and update the icon
