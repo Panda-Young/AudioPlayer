@@ -21,10 +21,10 @@ class AudioTrackManager(private val sampleRate: Int) {
     internal var isCompleted = false
     private var isPaused = false
     private var audioFileLength: Long = 0
-    private var positionOffset: Long = 0
-    private var pauseOffset: Long = 0
+    private var dataCurrentOffset: Long = 0
+    private var dataPauseOffset: Long = 0
     private var filePath: String? = null
-    private var flagJump = false
+    private var jumpFlag = false
     var onPlaybackComplete: (() -> Unit)? = null
 
     init {
@@ -57,17 +57,20 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
             audioFile = RandomAccessFile(filePath, "r")
             Logger.logi("Audio started playing $filePath")
             val wav = wavFile ?: WavFile(File(filePath))
-            positionOffset = wav.getDataStartOffset().toLong()
+            if (!jumpFlag) {
+                dataCurrentOffset = wav.getDataStartOffset().toLong()
+            }
             audioFileLength = audioFile?.length() ?: 0
 
             isPlaying = true
             isPaused = false
             isCompleted = false
+            jumpFlag = false
 
             if (resume) {
-                audioFile?.seek(pauseOffset)
+                audioFile?.seek(dataPauseOffset)
             } else {
-                audioFile?.seek(positionOffset)
+                audioFile?.seek(dataCurrentOffset)
             }
 
             audioTrack?.play()
@@ -94,7 +97,7 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
                         }
 
                         if (isPaused) {
-                            pauseOffset = audioFile?.filePointer ?: 0
+                            dataPauseOffset = audioFile?.filePointer ?: 0
                             audioTrack?.pause()
                             break
                         }
@@ -130,7 +133,7 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
             isPaused = true
             isPlaying = false
             audioTrack?.pause()
-            pauseOffset = audioFile?.filePointer ?: 0
+            dataPauseOffset = audioFile?.filePointer ?: 0
         }
     }
 
@@ -143,21 +146,15 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
     }
 
     fun seekTo(positionMillis: Long) {
-        try {
-            positionOffset = (positionMillis * sampleRate * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1)) / 1000
-            positionOffset -= positionOffset % 4
-            positionOffset = positionOffset.coerceIn(0, audioFileLength - 1)
-            flagJump = true
-
-            if (audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                stopPlay()
-                startPlay(filePath ?: return)
-            } else {
-                audioFile?.seek(positionOffset)
-            }
-        } catch (e: IOException) {
-            Logger.loge("Error seeking to position: ${e.message}")
+        dataCurrentOffset = (positionMillis * sampleRate * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1)) / 1000
+        dataCurrentOffset -= dataCurrentOffset % 4 // align to 4-byte boundary
+        if (isPlaying || isPaused) {
+            dataCurrentOffset = dataCurrentOffset.coerceIn(0, audioFileLength - 1) // ensure offset in valid range
+        } else {
+            jumpFlag = true
         }
+        audioFile?.seek(dataCurrentOffset)
+        dataPauseOffset = dataCurrentOffset
     }
 
     fun getCurrentPosition(): Int {
@@ -165,7 +162,7 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
             0
         } else {
             try {
-                val currentPosition = if (isPaused) pauseOffset else audioFile?.filePointer ?: 0
+                val currentPosition = if (isPaused) dataPauseOffset else audioFile?.filePointer ?: 0
                 (currentPosition / (sampleRate / 1000 * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1))).toInt()
             } catch (e: IOException) {
                 Logger.loge("Error getting current position: ${e.message}")
