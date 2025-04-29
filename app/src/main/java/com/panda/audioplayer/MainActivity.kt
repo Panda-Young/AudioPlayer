@@ -123,6 +123,8 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser && ::audioTrackManager.isInitialized) { // Check if audioTrackManager is initialized
                     audioTrackManager.seekTo(progress.toLong())
+                    val currentPosition = seekBar.progress
+                    viewInitializer.currentTime.text = formatTime(currentPosition)
                 }
             }
 
