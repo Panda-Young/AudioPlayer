@@ -26,6 +26,7 @@ class WavFile(private val file: File) {
         if (parsed) return // If already parsed, return directly
         parsed = true
         try {
+            Logger.logi("Parsing WAV file path $file")
             FileInputStream(file).use { fis ->
                 // Read the first 12 bytes to check RIFF and WAVE identifiers
                 val headerBuffer = ByteArray(12)
