@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         if (playlist.isNotEmpty()) {
             val initialFilePath = playlist[0]
             val wavFile = WavFile(File(initialFilePath))
-            initializeAudioTrackManager(wavFile.getSampleRate())
+            initializeAudioTrackManager(wavFile.getSampleRate(), wavFile.getChannels())
             updateAudioInfo(wavFile)
             handler.post(updateSeekBarRunnable)
         }
@@ -91,8 +91,8 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         }
     }
 
-    private fun initializeAudioTrackManager(sampleRate: Int) {
-        audioTrackManager = AudioTrackManager(sampleRate)
+    private fun initializeAudioTrackManager(sampleRate: Int, channelConfig: Int) {
+        audioTrackManager = AudioTrackManager(sampleRate, channelConfig)
         audioTrackManager.onPlaybackComplete = {
             runOnUiThread {
                 handlePlaybackCompletion()
@@ -264,7 +264,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
         // Initialize the new audio track manager with the new file's sample rate
         val wavFile = WavFile(File(filePath))
-        initializeAudioTrackManager(wavFile.getSampleRate())
+        initializeAudioTrackManager(wavFile.getSampleRate(), wavFile.getChannels())
 
         // Start playing the new audio from the beginning
         audioTrackManager.startPlay(filePath, wavFile)

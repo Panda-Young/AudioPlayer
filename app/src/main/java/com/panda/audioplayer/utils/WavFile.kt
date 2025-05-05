@@ -10,6 +10,7 @@ class WavFile(private val file: File) {
     private var parsed = false
     private var sampleRate = 44100 // Default sample rate
     private var channels = 2 // Default stereo
+    private var blockAlign = 4 // Default block align
     private var bitDepth = 16 // Default bit depth
     private var dataSize = 0
     private var dataStartOffset = 0
@@ -136,6 +137,7 @@ class WavFile(private val file: File) {
                 (fmtData[5].toInt() and 0xFF shl 8) or
                 (fmtData[6].toInt() and 0xFF shl 16) or
                 (fmtData[7].toInt() and 0xFF shl 24)
+        blockAlign = fmtData[12].toInt() and 0xFF or (fmtData[13].toInt() and 0xFF shl 8)
         bitDepth = fmtData[14].toInt() and 0xFF or (fmtData[15].toInt() and 0xFF shl 8)
         Logger.logi("Parsed WAV header: audioFormat=$audioFormat, channels=$channels, sampleRate=$sampleRate, bitDepth=$bitDepth")
     }
@@ -233,6 +235,10 @@ class WavFile(private val file: File) {
 
     fun getBitDepth(): Int {
         return bitDepth
+    }
+
+    fun getBlockAlign(): Int {
+        return blockAlign
     }
 
     fun getAudioData(): ByteArray {

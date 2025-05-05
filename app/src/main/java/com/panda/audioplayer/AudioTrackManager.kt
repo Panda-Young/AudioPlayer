@@ -10,11 +10,16 @@ import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
 
-class AudioTrackManager(private val sampleRate: Int) {
+class AudioTrackManager(private val sampleRate: Int, private val channelConfig: Int) {
 
-    private val channelConfig = AudioFormat.CHANNEL_OUT_STEREO
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-    private val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 3 // 3 for 24 bit pcm
+    private val channelMask = when (channelConfig) {
+        1 -> AudioFormat.CHANNEL_OUT_MONO
+        2 -> AudioFormat.CHANNEL_OUT_STEREO
+        else -> AudioFormat.CHANNEL_OUT_MONO
+    }
+    private var blockAlign: Int = 0
+    private val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, audioFormat) * 3 // 3 for 24 bit pcm
     private var audioTrack: AudioTrack? = null
     private var audioFile: RandomAccessFile? = null
     internal var isPlaying = false
@@ -42,7 +47,7 @@ class AudioTrackManager(private val sampleRate: Int) {
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setSampleRate(sampleRate)
-                    .setChannelMask(channelConfig)
+                    .setChannelMask(channelMask)
                     .setEncoding(audioFormat)
                     .build()
             )
@@ -57,6 +62,7 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
             audioFile = RandomAccessFile(filePath, "r")
             Logger.logi("Audio started playing $filePath")
             val wav = wavFile ?: WavFile(File(filePath))
+            this.blockAlign = wav.getBlockAlign()
             if (!jumpFlag) {
                 dataCurrentOffset = wav.getDataStartOffset().toLong()
             }
@@ -146,7 +152,7 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
     }
 
     fun seekTo(positionMillis: Long) {
-        dataCurrentOffset = (positionMillis * sampleRate * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1)) / 1000
+        dataCurrentOffset = positionMillis * sampleRate / 1000 * blockAlign
         dataCurrentOffset -= dataCurrentOffset % 4 // align to 4-byte boundary
         if (isPlaying || isPaused) {
             dataCurrentOffset = dataCurrentOffset.coerceIn(0, audioFileLength - 1) // ensure offset in valid range
@@ -163,7 +169,7 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
         } else {
             try {
                 val currentPosition = if (isPaused) dataPauseOffset else audioFile?.filePointer ?: 0
-                (currentPosition / (sampleRate / 1000 * 2 * (if (channelConfig == AudioFormat.CHANNEL_OUT_STEREO) 2 else 1))).toInt()
+                (currentPosition / (sampleRate / 1000 * blockAlign)).toInt()
             } catch (e: IOException) {
                 Logger.loge("Error getting current position: ${e.message}")
                 0
