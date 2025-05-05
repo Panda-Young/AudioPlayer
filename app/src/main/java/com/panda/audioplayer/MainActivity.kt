@@ -275,6 +275,9 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         // Update the play/pause button icon to pause
         val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
         playPauseButton.setImageResource(R.drawable.ic_pause)
+
+        handler.removeCallbacks(updateSeekBarRunnable)
+        handler.post(updateSeekBarRunnable)
     }
 
     private fun updateAudioInfo(wavFile: WavFile) {
