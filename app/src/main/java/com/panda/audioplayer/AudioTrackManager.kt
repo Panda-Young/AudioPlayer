@@ -87,7 +87,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
             .build()
     }
 
-fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = false) {
+    fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = false) {
         try {
             if (resume) {
                 audioFile?.seek(dataPauseOffset)
