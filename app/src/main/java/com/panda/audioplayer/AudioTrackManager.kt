@@ -20,7 +20,10 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
         2 -> AudioFormat.CHANNEL_OUT_STEREO
         else -> AudioFormat.CHANNEL_OUT_MONO
     }
-    private var blockAlign: Int = 0
+    private var fileChanels: Int = 0
+    private var fileBlockAlign: Int = 0
+    private var fileBitDepth: Int = 0
+    private var fileAudioFormat: Int = 0
     private val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelMask, audioFormat) * 3 // 3 for 24 bit pcm
     private var audioTrack: AudioTrack? = null
     private var audioFile: RandomAccessFile? = null
@@ -30,7 +33,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     private var audioFileLength: Long = 0
     private var dataCurrentOffset: Long = 0
     private var dataPauseOffset: Long = 0
-    private var dataStartOffset: Long = 0
+    private var dataChunkOffset: Long = 0
     private var filePath: String? = null
     private var jumpFlag = false
     var onPlaybackComplete: (() -> Unit)? = null
@@ -86,30 +89,30 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
 
 fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = false) {
         try {
-            stopPlay()
-            initAlgorithm()
-            this.filePath = filePath
-            audioFile = RandomAccessFile(filePath, "r")
-            Logger.logi("Audio started playing $filePath")
-            val wav = wavFile ?: WavFile(File(filePath))
-            this.blockAlign = wav.getBlockAlign()
-            this.dataStartOffset = wav.getDataStartOffset()?.toLong() ?: 0
-            if (!jumpFlag) {
-                dataCurrentOffset = wav.getDataStartOffset().toLong()
+            if (resume) {
+                audioFile?.seek(dataPauseOffset)
+            } else {
+                stopPlay()
+                initAlgorithm()
+                this.filePath = filePath
+                audioFile = RandomAccessFile(filePath, "r")
+                Logger.logi("Audio started playing $filePath")
+                val wav = wavFile ?: WavFile(File(filePath))
+                this.fileChanels = wav.getChannels()
+                this.fileBlockAlign = wav.getBlockAlign()
+                this.fileBitDepth = wav.getBitDepth()
+                this.fileAudioFormat = wav.getAudioFormat()
+                this.dataChunkOffset = wav.getDataStartOffset()?.toLong() ?: 0
+                if (!jumpFlag) {
+                    dataCurrentOffset = dataChunkOffset
+                }
+                audioFileLength = audioFile?.length() ?: 0
+                audioFile?.seek(dataCurrentOffset)
             }
-            audioFileLength = audioFile?.length() ?: 0
-
             isPlaying = true
             isPaused = false
             isCompleted = false
             jumpFlag = false
-
-            if (resume) {
-                audioFile?.seek(dataPauseOffset)
-            } else {
-                audioFile?.seek(dataCurrentOffset)
-            }
-
             audioTrack?.play()
 
             Thread {
@@ -118,11 +121,11 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
                     while (isPlaying && audioFile?.filePointer ?: 0 < audioFileLength) {
                         val read = audioFile?.read(buffer) ?: 0
                         if (read > 0) {
-                            val convertedBuffer = when (wav.getBitDepth()) {
+                            val convertedBuffer = when (fileBitDepth) {
                                 8 -> AudioDataConverter.convert8BitTo16Bit(buffer)
                                 24 -> AudioDataConverter.convert24BitTo16Bit(buffer)
                                 32 -> {
-                                    when (wav.getAudioFormat()) {
+                                    when (fileAudioFormat) {
                                         1 -> AudioDataConverter.convert32BitIntTo16Bit(buffer) // 32-bit int
                                         3 -> AudioDataConverter.convert32BitFloatTo16Bit(buffer) // 32-bit float
                                         else -> buffer // use raw data
@@ -190,9 +193,9 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
     }
 
     fun seekTo(positionMillis: Long) {
-        dataCurrentOffset = positionMillis * sampleRate / 1000 * blockAlign
-        dataCurrentOffset -= dataCurrentOffset % blockAlign // align to blockAlign-byte boundary
-        dataCurrentOffset += dataStartOffset
+        dataCurrentOffset = positionMillis * sampleRate / 1000 * fileBlockAlign
+        dataCurrentOffset -= dataCurrentOffset % fileBlockAlign // align to fileBlockAlign-byte boundary
+        dataCurrentOffset += dataChunkOffset
         if (isPlaying || isPaused) {
             dataCurrentOffset = dataCurrentOffset.coerceIn(0, audioFileLength - 1) // ensure offset in valid range
         } else {
@@ -208,7 +211,7 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
         } else {
             try {
                 val currentPosition = if (isPaused) dataPauseOffset else audioFile?.filePointer ?: 0
-                (currentPosition / (sampleRate / 1000 * blockAlign)).toInt()
+                (currentPosition / (sampleRate / 1000 * fileBlockAlign)).toInt()
             } catch (e: IOException) {
                 Logger.loge("Error getting current position: ${e.message}")
                 0

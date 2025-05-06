@@ -304,7 +304,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         } else {
             if (audioTrackManager.isSameAudioFile(selectedFilePath) && !audioTrackManager.isCompleted) {
                 audioTrackManager.resumePlay()
-                Logger.logi("Resuming playback from paused position")
+                Logger.logi("Resuming playback")
             } else {
                 audioTrackManager.startPlay(selectedFilePath)
             }

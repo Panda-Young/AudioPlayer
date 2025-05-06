@@ -148,16 +148,17 @@ void __attribute__((destructor)) close_log_operation(void);
 #include <sys/syscall.h>
 #include <unistd.h>
 #define LOG_TAG "AudioPlayer"
-#define LOG(level, priority, prefix_content, fmt, ...)                                    \
-    do {                                                                                  \
-        if (log_level >= level) {                                                         \
-            if (prefix_content) {                                                         \
-                __android_log_print(priority, LOG_TAG, "%s:%d @%s: " fmt,                 \
-                                    __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); \
-            } else {                                                                      \
-                __android_log_print(priority, LOG_TAG, fmt, ##__VA_ARGS__);               \
-            }                                                                             \
-        }                                                                                 \
+#define LOG(level, priority, prefix_content, fmt, ...)                                                       \
+    do {                                                                                                     \
+        if (log_level >= level) {                                                                            \
+            if (prefix_content) {                                                                            \
+                char _log_buf_[1024] = {0};                                                                  \
+                snprintf(_log_buf_, sizeof(_log_buf_), "%s:%d @%s: ", __FILENAME__, __LINE__, __FUNCTION__); \
+                __android_log_print(priority, LOG_TAG, "%-65s" fmt, _log_buf_, ##__VA_ARGS__);               \
+            } else {                                                                                         \
+                __android_log_print(priority, LOG_TAG, fmt, ##__VA_ARGS__);                                  \
+            }                                                                                                \
+        }                                                                                                    \
     } while (0)
 
 #define LOGD2(fmt, ...) LOG(LOG_LEVEL_DEBUG, ANDROID_LOG_DEBUG, 0, fmt, ##__VA_ARGS__)
@@ -181,8 +182,8 @@ extern FILE *log_file;
             GetLocalTime(&st);                                                                                       \
             int pid = (int)GetCurrentProcessId();                                                                    \
             int tid = (int)GetCurrentThreadId();                                                                     \
-            char _log_buf_[1024] = {0};                                                                              \
             if (prefix_content) {                                                                                    \
+                char _log_buf_[1024] = {0};                                                                          \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%03d %s [%d.%d] %s %s:%d @%s", \
                          st.wYear, st.wMonth, st.wDay,                                                               \
                          st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,                                         \
@@ -209,8 +210,8 @@ extern FILE *log_file;
             struct tm *tm_info = localtime(&time);                                                                    \
             int pid = (int)getpid();                                                                                  \
             int tid = (int)syscall(SYS_gettid);                                                                       \
-            char _log_buf_[1024] = {0};                                                                               \
             if (prefix_content) {                                                                                     \
+                char _log_buf_[1024] = {0};                                                                           \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%06ld %s [%d.%d] %s %s:%d @%s", \
                          tm_info->tm_year + 1900, tm_info->tm_mon + 1, tm_info->tm_mday,                              \
                          tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec, tv.tv_usec,                              \
@@ -257,8 +258,8 @@ void __attribute__((destructor)) close_log_file(void);
             GetLocalTime(&st);                                                                                    \
             int pid = (int)GetCurrentProcessId();                                                                 \
             int tid = (int)GetCurrentThreadId();                                                                  \
-            char _log_buf_[1024] = {0};                                                                           \
             if (prefix_content) {                                                                                 \
+                char _log_buf_[1024] = {0};                                                                       \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%03d %s [%d.%d] %s:%d @%s", \
                          st.wYear, st.wMonth, st.wDay,                                                            \
                          st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,                                      \
@@ -277,8 +278,8 @@ void __attribute__((destructor)) close_log_file(void);
             GetLocalTime(&st);                                                                                    \
             int pid = (int)GetCurrentProcessId();                                                                 \
             int tid = (int)GetCurrentThreadId();                                                                  \
-            char _log_buf_[1024] = {0};                                                                           \
             if (prefix_content) {                                                                                 \
+                char _log_buf_[1024] = {0};                                                                       \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%03d %s [%d.%d] %s:%d @%s", \
                          st.wYear, st.wMonth, st.wDay,                                                            \
                          st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,                                      \
@@ -305,8 +306,8 @@ void __attribute__((destructor)) close_log_file(void);
             struct tm *tm_info = localtime(&time);                                                                 \
             int pid = (int)getpid();                                                                               \
             int tid = (int)syscall(SYS_gettid);                                                                    \
-            char _log_buf_[1024] = {0};                                                                            \
             if (prefix_content) {                                                                                  \
+                char _log_buf_[1024] = {0};                                                                        \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%06ld %s [%d.%d] %s:%d @%s", \
                          tm_info->tm_year + 1900, tm_info->tm_mon + 1, tm_info->tm_mday,                           \
                          tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec, tv.tv_usec,                           \
