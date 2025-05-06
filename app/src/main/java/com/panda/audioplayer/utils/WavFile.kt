@@ -26,17 +26,21 @@ class WavFile(private val file: File) {
         if (parsed) return // If already parsed, return directly
         parsed = true
         try {
-            Logger.logi("Parsing WAV file path $file")
             FileInputStream(file).use { fis ->
                 // Read the first 12 bytes to check RIFF and WAVE identifiers
                 val headerBuffer = ByteArray(12)
                 fis.read(headerBuffer)
 
                 // Check if the file is a valid WAV file
-                if (String(headerBuffer, 0, 4) != "RIFF" || String(headerBuffer, 8, 4) != "WAVE") {
-                    Logger.logw("Invalid RIFF file: $String(headerBuffer, 0, 4) or not WAVE identifier: $String(headerBuffer, 8, 4)")
-                    throw IOException("Invalid WAV file")
+                if (String(headerBuffer, 0, 4) != "RIFF") {
+                    Logger.logw("$file is not a valid RIFF file")
+                    return
                 }
+                if (String(headerBuffer, 8, 4) != "WAVE") {
+                    Logger.logw("$file is not a valid WAVE file")
+                    return
+                }
+                Logger.logi("Parsing WAV file path $file")
 
                 var fmtChunkFound = false
                 var dataChunkFound = false
