@@ -358,7 +358,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     override fun onPermissionsDenied() {
-        Logger.logw("Permissions denied, exiting the app")
+        Logger.loge("Permissions denied, exiting the app")
         finish()
     }
 

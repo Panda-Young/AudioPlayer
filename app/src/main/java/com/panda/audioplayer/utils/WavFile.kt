@@ -33,11 +33,11 @@ class WavFile(private val file: File) {
 
                 // Check if the file is a valid WAV file
                 if (String(headerBuffer, 0, 4) != "RIFF") {
-                    Logger.logw("$file is not a valid RIFF file")
+                    Logger.loge("$file is not a valid RIFF file")
                     return
                 }
                 if (String(headerBuffer, 8, 4) != "WAVE") {
-                    Logger.logw("$file is not a valid WAVE file")
+                    Logger.loge("$file is not a valid WAVE file")
                     return
                 }
                 Logger.logi("Parsing WAV file path $file")
@@ -99,17 +99,17 @@ class WavFile(private val file: File) {
                 }
 
                 if (!fmtChunkFound) {
-                    Logger.logw("Invalid WAV file: fmt chunk not found.")
+                    Logger.loge("Invalid WAV file: fmt chunk not found.")
                     throw IOException("Invalid WAV file: fmt chunk not found")
                 }
 
                 if (!dataChunkFound) {
-                    Logger.logw("Invalid WAV file: data chunk not found.")
+                    Logger.loge("Invalid WAV file: data chunk not found.")
                     throw IOException("Invalid WAV file: data chunk not found")
                 }
             }
         } catch (e: IOException) {
-            Logger.loge("Error parsing WAV file header: ${e.message}")
+            Logger.logf("Error parsing WAV file header: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -128,12 +128,12 @@ class WavFile(private val file: File) {
             System.arraycopy(fmtData, 24, subFormat, 0, 16)
             val actualFormat = subFormat[0].toInt() and 0xFF or (subFormat[1].toInt() and 0xFF shl 8)
             if (actualFormat != 1 && actualFormat != 3) {
-                Logger.logw("Unsupported WAV sub format: actualFormat=$actualFormat. Only PCM (1) and IEEE Float (3) are supported")
+                Logger.loge("Unsupported WAV sub format: actualFormat=$actualFormat. Only PCM (1) and IEEE Float (3) are supported")
                 throw IOException("Unsupported WAV sub format: only PCM and IEEE Float are supported")
             }
             audioFormat = actualFormat
         } else if (audioFormat != 1 && audioFormat != 3) {
-            Logger.logw("Unsupported WAV format: audioFormat=$audioFormat. Only PCM (1) and IEEE Float (3) are supported")
+            Logger.loge("Unsupported WAV format: audioFormat=$audioFormat. Only PCM (1) and IEEE Float (3) are supported")
             throw IOException("Unsupported WAV format: only PCM and IEEE Float are supported")
         }
 
@@ -154,7 +154,7 @@ class WavFile(private val file: File) {
             var offset = 4
             while (offset < listData.size) {
                 if (offset + 7 >= listData.size) {
-                    Logger.loge("Invalid listData: not enough bytes to read subChunkId and subChunkSize")
+                    Logger.logf("Invalid listData: not enough bytes to read subChunkId and subChunkSize")
                     break
                 }
 
@@ -168,7 +168,7 @@ class WavFile(private val file: File) {
                 offset += 8
 
                 if (!subChunkId.all { it.isLetterOrDigit() }) {
-                    Logger.loge("Invalid subChunkId: $subChunkId, skipping chunk")
+                    Logger.logf("Invalid subChunkId: $subChunkId, skipping chunk")
                     offset += subChunkSize
                     if (subChunkSize % 2 != 0) {
                         offset += 1
@@ -177,7 +177,7 @@ class WavFile(private val file: File) {
                 }
 
                 if (subChunkSize <= 0 || offset + subChunkSize > listData.size) {
-                    Logger.loge("Invalid subChunkSize: $subChunkSize, remaining bytes: ${listData.size - offset}")
+                    Logger.logf("Invalid subChunkSize: $subChunkSize, remaining bytes: ${listData.size - offset}")
                     offset = listData.size
                     continue
                 }
@@ -189,7 +189,7 @@ class WavFile(private val file: File) {
                         "IART" -> artist = subChunkData
                     }
                 } catch (e: Exception) {
-                    Logger.loge("Failed to decode subChunkData for id=$subChunkId: ${e.message}")
+                    Logger.logf("Failed to decode subChunkData for id=$subChunkId: ${e.message}")
                 }
                 offset += subChunkSize
                 if (subChunkSize % 2 != 0) {

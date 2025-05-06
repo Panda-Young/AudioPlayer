@@ -37,7 +37,7 @@ class PermissionManager(private val activity: Activity) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(Manifest.permission.READ_MEDIA_AUDIO)
-                Logger.logw("READ_MEDIA_AUDIO permission not granted, requesting permission")
+                Logger.loge("READ_MEDIA_AUDIO permission not granted, requesting permission")
             } else {
                 Logger.logi("READ_MEDIA_AUDIO permission already granted")
             }
@@ -45,7 +45,7 @@ class PermissionManager(private val activity: Activity) {
             // Check for READ_EXTERNAL_STORAGE permission on older versions
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-                Logger.logw("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
+                Logger.loge("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
             } else {
                 Logger.logi("READ_EXTERNAL_STORAGE permission already granted")
             }
@@ -55,7 +55,7 @@ class PermissionManager(private val activity: Activity) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                Logger.logw("WRITE_EXTERNAL_STORAGE permission not granted, requesting permission")
+                Logger.loge("WRITE_EXTERNAL_STORAGE permission not granted, requesting permission")
             } else {
                 Logger.logi("WRITE_EXTERNAL_STORAGE permission already granted")
             }
@@ -64,7 +64,7 @@ class PermissionManager(private val activity: Activity) {
         // Check for MANAGE_EXTERNAL_STORAGE permission on Android 11 (R) and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
-                Logger.logw("MANAGE_EXTERNAL_STORAGE permission not granted, redirecting to settings")
+                Logger.loge("MANAGE_EXTERNAL_STORAGE permission not granted, redirecting to settings")
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
                 intent.data = Uri.parse("package:${activity.packageName}")
                 activity.startActivity(intent)
@@ -90,7 +90,7 @@ class PermissionManager(private val activity: Activity) {
                     if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
                         Logger.logi("${permissions[i]} permission granted")
                     } else {
-                        Logger.logw("${permissions[i]} permission denied")
+                        Logger.loge("${permissions[i]} permission denied")
                         allPermissionsGranted = false
                     }
                 }
@@ -100,7 +100,7 @@ class PermissionManager(private val activity: Activity) {
                     showPermissionDeniedDialog()
                 }
             } else {
-                Logger.logw("No permission results received")
+                Logger.loge("No permission results received")
             }
         }
     }

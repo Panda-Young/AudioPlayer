@@ -14,8 +14,10 @@ object Logger {
         return "$fileName:$lineNumber @$methodName".padEnd(64, ' ')
     }
 
+    fun logv(message: String) { Log.v(TAG, "${getLogPrefix()} $message") }
     fun logd(message: String) { Log.d(TAG, "${getLogPrefix()} $message") }
     fun logi(message: String) { Log.i(TAG, "${getLogPrefix()} $message") }
     fun logw(message: String) { Log.w(TAG, "${getLogPrefix()} $message") }
     fun loge(message: String) { Log.e(TAG, "${getLogPrefix()} $message") }
+    fun logf(message: String) { Log.wtf(TAG, "${getLogPrefix()} $message") }
 }

@@ -136,7 +136,7 @@ class AudioFileManager(private val contentResolver: ContentResolver, private val
             }
             Logger.logd("Cache saved to file: ${cacheFile.absolutePath}")
         } catch (e: Exception) {
-            Logger.loge("Error saving cache to file: ${e.message}")
+            Logger.logf("Error saving cache to file: ${e.message}")
         }
     }
 
@@ -154,7 +154,7 @@ class AudioFileManager(private val contentResolver: ContentResolver, private val
                 null
             }
         } catch (e: Exception) {
-            Logger.loge("Error loading cache from file: ${e.message}")
+            Logger.logf("Error loading cache from file: ${e.message}")
             null
         }
     }

@@ -47,7 +47,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     private fun initAlgorithm() {
         val version = ByteArray(1024)
         if (algo.getAlgoVersion(version) != 0) {
-            Logger.loge("Failed to get algo version")
+            Logger.logf("Failed to get algo version")
             return
         }
 
@@ -153,11 +153,11 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                         Logger.logi("Audio playback completed")
                     }
                 } catch (e: IOException) {
-                    Logger.loge("Error during playback: ${e.message}")
+                    Logger.logf("Error during playback: ${e.message}")
                 }
             }.start()
         } catch (e: IOException) {
-            Logger.loge("Error starting playback: ${e.message}")
+            Logger.logf("Error starting playback: ${e.message}")
         }
     }
 
@@ -171,7 +171,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
         try {
             audioFile?.close()
         } catch (e: IOException) {
-            Logger.loge("Error closing audio file: ${e.message}")
+            Logger.logf("Error closing audio file: ${e.message}")
         }
     }
 
@@ -213,7 +213,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                 val currentPosition = if (isPaused) dataPauseOffset else audioFile?.filePointer ?: 0
                 (currentPosition / (sampleRate / 1000 * fileBlockAlign)).toInt()
             } catch (e: IOException) {
-                Logger.loge("Error getting current position: ${e.message}")
+                Logger.logf("Error getting current position: ${e.message}")
                 0
             }
         }
