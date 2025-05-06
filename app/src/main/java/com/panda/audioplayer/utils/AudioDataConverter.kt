@@ -1,5 +1,8 @@
 package com.panda.audioplayer.utils
 
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
 object AudioDataConverter {
 
     fun convert8BitTo16Bit(data: ByteArray): ByteArray {
@@ -57,5 +60,30 @@ object AudioDataConverter {
             convertedData[i * 2 + 1] = (sample16Bit shr 8 and 0xFF).toByte()
         }
         return convertedData
+    }
+
+    fun byteArrayToFloatArray(byteArray: ByteArray): FloatArray {
+        val floatArray = FloatArray(byteArray.size / 2)
+        val byteBuffer = ByteBuffer.wrap(byteArray)
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
+        val shortBuffer = byteBuffer.asShortBuffer()
+        for (i in 0 until floatArray.size) {
+            val shortValue = shortBuffer.get(i)
+            floatArray[i] = shortValue.toFloat() / 32768.0f
+        }
+        return floatArray
+    }
+
+    fun floatArrayToByteArray(floatArray: FloatArray): ByteArray {
+        val byteArray = ByteArray(floatArray.size * 2)
+        val byteBuffer = ByteBuffer.wrap(byteArray)
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
+        val shortBuffer = byteBuffer.asShortBuffer()
+        for (i in 0 until floatArray.size) {
+            val floatValue = floatArray[i].coerceIn(-1.0f, 1.0f)
+            val shortValue = (floatValue * 32768.0f).toInt().toShort()
+            shortBuffer.put(i, shortValue)
+        }
+        return byteArray
     }
 }

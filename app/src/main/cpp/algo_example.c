@@ -180,7 +180,7 @@ float dBtoGain(float dB) {
     return powf(10.0f, dB / 20.0f);
 }
 
-int algo_process(void *algo_handle, const float *input, float *output, int block_size)
+int algo_process(void *algo_handle, const float *input, float *output, int sample_count)
 {
     if (algo_handle == NULL) {
         return E_ALGO_HANDLE_NULL;
@@ -193,13 +193,13 @@ int algo_process(void *algo_handle, const float *input, float *output, int block
         LOGE("output is NULL");
         return E_PARAM_BUFFER_NULL;
     }
-    if (block_size <= 0) {
-        LOGE("block_size is not correct");
+    if (sample_count <= 0) {
+        LOGE("sample_count is not correct");
         return E_PARAM_SIZE_INVALID;
     }
     p_algo_handle_t algo_handle_ptr = (p_algo_handle_t)algo_handle;
 
-    for (int i = 0; i < block_size; i++) {
+    for (int i = 0; i < sample_count; i++) {
         output[i] = input[i] * dBtoGain(algo_handle_ptr->param2);
     }
 

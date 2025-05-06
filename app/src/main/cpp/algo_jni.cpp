@@ -3,10 +3,10 @@
 
 extern "C" {
 JNIEXPORT jint JNICALL
-Java_com_panda_audioplayer_AlgoExample_getAlgoVersion(JNIEnv *env, jobject thiz, jstring version) {
-    const char *versionStr = env->GetStringUTFChars(version, 0);
-    int result = get_algo_version((char *)versionStr);
-    env->ReleaseStringUTFChars(version, versionStr);
+Java_com_panda_audioplayer_AlgoExample_getAlgoVersion(JNIEnv *env, jobject thiz, jbyteArray version) {
+    jbyte* versionBytes = env->GetByteArrayElements(version, 0);
+    int result = get_algo_version((char *)versionBytes);
+    env->ReleaseByteArrayElements(version, versionBytes, 0);
     return result;
 }
 
@@ -42,10 +42,10 @@ Java_com_panda_audioplayer_AlgoExample_algoGetParam(JNIEnv *env, jobject thiz, j
 
 
 JNIEXPORT jint JNICALL
-Java_com_panda_audioplayer_AlgoExample_algoProcess(JNIEnv *env, jobject thiz, jlong algo_handle, jfloatArray input, jfloatArray output, jint block_size) {
+Java_com_panda_audioplayer_AlgoExample_algoProcess(JNIEnv *env, jobject thiz, jlong algo_handle, jfloatArray input, jfloatArray output, jint sample_count) {
     jfloat *inputArray = env->GetFloatArrayElements(input, 0);
     jfloat *outputArray = env->GetFloatArrayElements(output, 0);
-    int result = algo_process((void *)algo_handle, inputArray, outputArray, block_size);
+    int result = algo_process((void *)algo_handle, inputArray, outputArray, sample_count);
     env->ReleaseFloatArrayElements(input, inputArray, 0);
     env->ReleaseFloatArrayElements(output, outputArray, 0);
     return result;

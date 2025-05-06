@@ -9,6 +9,8 @@ import com.panda.audioplayer.utils.AudioDataConverter
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class AudioTrackManager(private val sampleRate: Int, private val channelConfig: Int) {
 
@@ -31,9 +33,35 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     private var filePath: String? = null
     private var jumpFlag = false
     var onPlaybackComplete: (() -> Unit)? = null
+    private var algoHandle: Long = 0
+    private val algo = AlgoExample()
 
     init {
         initializeAudioTrack()
+    }
+
+    private fun initAlgorithm() {
+        val version = ByteArray(1024)
+        if (algo.getAlgoVersion(version) != 0) {
+            Logger.loge("Failed to get algo version")
+            return
+        }
+
+        var endIndex = 0
+        while (endIndex < version.size && version[endIndex].toInt() != 0) {
+            endIndex++
+        }
+        val validVersionBytes = version.copyOfRange(0, endIndex)
+        val versionString = String(validVersionBytes)
+
+        Logger.logi("Algorithm version: $versionString")
+        algoHandle = algo.algoInit()
+
+        val param = ByteBuffer.allocate(4).apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+            putFloat(-20.0f)
+        }.array()
+        algo.algoSetParam(algoHandle, 2, param, param.size)
     }
 
     private fun initializeAudioTrack() {
@@ -58,6 +86,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
 fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = false) {
         try {
             stopPlay()
+            initAlgorithm()
             this.filePath = filePath
             audioFile = RandomAccessFile(filePath, "r")
             Logger.logi("Audio started playing $filePath")
@@ -99,7 +128,11 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
                                 }
                                 else -> buffer // use raw data
                             }
-                            audioTrack?.write(convertedBuffer, 0, convertedBuffer.size)
+                            // audioTrack?.write(convertedBuffer, 0, convertedBuffer.size)
+                            val floatInput = AudioDataConverter.byteArrayToFloatArray(convertedBuffer)
+                            val floatOutput = FloatArray(floatInput.size)
+                            algo.algoProcess(algoHandle, floatInput, floatOutput, floatOutput.size)
+                            audioTrack?.write(AudioDataConverter.floatArrayToByteArray(floatOutput), 0, convertedBuffer.size)
                         }
 
                         if (isPaused) {
@@ -125,6 +158,9 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
 
     fun stopPlay() {
         isPlaying = false
+        if (algoHandle != 0L) {
+            algo.algoDeinit(algoHandle)
+        }
         audioTrack?.stop()
         audioTrack?.flush()
         try {

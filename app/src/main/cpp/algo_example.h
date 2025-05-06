@@ -39,7 +39,7 @@ void *algo_init();
 void algo_deinit(void *algo_handle);
 int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_size);
 int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_size);
-int algo_process(void *algo_handle, const float *input, float *output, int block_size);
+int algo_process(void *algo_handle, const float *input, float *output, int sample_count);
 
 #ifdef __cplusplus
 }

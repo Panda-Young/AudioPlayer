@@ -64,10 +64,10 @@ __attribute__((destructor)) void free_exe_path();
 
 extern slog2_buffer_t slog_buffer;
 
-#define LOG(level, code, prefix_content, fmt, ...)                                                          \
+#define LOG(level, code, prefix_content, fmt, ...)                                                           \
     do {                                                                                                     \
         if (slog_buffer != NULL && log_level >= level) {                                                     \
-            if (prefix_content) {                                                                           \
+            if (prefix_content) {                                                                            \
                 slog2f(slog_buffer, CODE_MASK, code, "%d @%s: " fmt, __LINE__, __FUNCTION__, ##__VA_ARGS__); \
             } else {                                                                                         \
                 slog2f(slog_buffer, CODE_MASK, code, fmt, ##__VA_ARGS__);                                    \
@@ -92,10 +92,10 @@ void __attribute__((constructor)) slog_buffer_init(void);
 #define CODE_MASK 900
 #define _SLOGC_YOUNG _SLOG_SETCODE(_SLOGC_PRIVATE_START + CODE_MASK, 1)
 
-#define LOG(level, code, prefix_content, fmt, ...)                                               \
+#define LOG(level, code, prefix_content, fmt, ...)                                                \
     do {                                                                                          \
         if (log_level >= level) {                                                                 \
-            if (prefix_content) {                                                                \
+            if (prefix_content) {                                                                 \
                 slogf(_SLOGC_YOUNG, code, "%d @%s: " fmt, __LINE__, __FUNCTION__, ##__VA_ARGS__); \
             } else {                                                                              \
                 slogf(_SLOGC_YOUNG, code, fmt, ##__VA_ARGS__);                                    \
@@ -117,10 +117,10 @@ void __attribute__((constructor)) slog_buffer_init(void);
 #include <sys/syscall.h>
 #include <syslog.h>
 #include <unistd.h>
-#define LOG(level, priority, prefix_content, fmt, ...)                                \
+#define LOG(level, priority, prefix_content, fmt, ...)                                 \
     do {                                                                               \
         if (log_level >= level) {                                                      \
-            if (prefix_content) {                                                     \
+            if (prefix_content) {                                                      \
                 int pid = (int)getpid();                                               \
                 int tid = (int)syscall(SYS_gettid);                                    \
                 syslog(priority, "[%d.%d] %s:%d @%s: " fmt,                            \
@@ -148,18 +148,16 @@ void __attribute__((destructor)) close_log_operation(void);
 #include <sys/syscall.h>
 #include <unistd.h>
 #define LOG_TAG "AudioPlayer"
-#define LOG(level, priority, prefix_content, fmt, ...)                                             \
-    do {                                                                                            \
-        if (log_level >= level) {                                                                   \
-            if (prefix_content) {                                                                  \
-                int pid = (int)getpid();                                                            \
-                int tid = (int)syscall(SYS_gettid);                                                 \
-                __android_log_print(priority, LOG_TAG, "[%d.%d] %s:%d @%s: " fmt,                   \
-                                    pid, tid, __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); \
-            } else {                                                                                \
-                __android_log_print(priority, LOG_TAG, fmt, ##__VA_ARGS__);                         \
-            }                                                                                       \
-        }                                                                                           \
+#define LOG(level, priority, prefix_content, fmt, ...)                                    \
+    do {                                                                                  \
+        if (log_level >= level) {                                                         \
+            if (prefix_content) {                                                         \
+                __android_log_print(priority, LOG_TAG, "%s:%d @%s: " fmt,                 \
+                                    __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); \
+            } else {                                                                      \
+                __android_log_print(priority, LOG_TAG, fmt, ##__VA_ARGS__);               \
+            }                                                                             \
+        }                                                                                 \
     } while (0)
 
 #define LOGD2(fmt, ...) LOG(LOG_LEVEL_DEBUG, ANDROID_LOG_DEBUG, 0, fmt, ##__VA_ARGS__)
@@ -176,7 +174,7 @@ extern FILE *log_file;
 
 #if defined(_WIN32) || defined(_WIN64)
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_MSC_VER)
-#define LOG(level, prefix_content, level_str, fmt, ...)                                                             \
+#define LOG(level, prefix_content, level_str, fmt, ...)                                                              \
     do {                                                                                                             \
         if (log_file && log_level >= level) {                                                                        \
             SYSTEMTIME st = {0};                                                                                     \
@@ -184,7 +182,7 @@ extern FILE *log_file;
             int pid = (int)GetCurrentProcessId();                                                                    \
             int tid = (int)GetCurrentThreadId();                                                                     \
             char _log_buf_[1024] = {0};                                                                              \
-            if (prefix_content) {                                                                                   \
+            if (prefix_content) {                                                                                    \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%03d %s [%d.%d] %s %s:%d @%s", \
                          st.wYear, st.wMonth, st.wDay,                                                               \
                          st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,                                         \
@@ -202,7 +200,7 @@ extern FILE *log_file;
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <unistd.h>
-#define LOG(level, prefix_content, level_str, fmt, args...)                                                          \
+#define LOG(level, prefix_content, level_str, fmt, args...)                                                           \
     do {                                                                                                              \
         if (log_file && log_level >= level) {                                                                         \
             struct timeval tv = {0};                                                                                  \
@@ -212,7 +210,7 @@ extern FILE *log_file;
             int pid = (int)getpid();                                                                                  \
             int tid = (int)syscall(SYS_gettid);                                                                       \
             char _log_buf_[1024] = {0};                                                                               \
-            if (prefix_content) {                                                                                    \
+            if (prefix_content) {                                                                                     \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%06ld %s [%d.%d] %s %s:%d @%s", \
                          tm_info->tm_year + 1900, tm_info->tm_mon + 1, tm_info->tm_mday,                              \
                          tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec, tv.tv_usec,                              \
@@ -252,7 +250,7 @@ void __attribute__((destructor)) close_log_file(void);
 #else // print log to console
 #if defined(_WIN32) || defined(_WIN64)
 #if defined(__MINGW32__) || defined(__MINGW64__)
-#define LOG(level, color, prefix_content, fmt, ...)                                                              \
+#define LOG(level, color, prefix_content, fmt, ...)                                                               \
     do {                                                                                                          \
         if (log_level >= level) {                                                                                 \
             SYSTEMTIME st = {0};                                                                                  \
@@ -260,7 +258,7 @@ void __attribute__((destructor)) close_log_file(void);
             int pid = (int)GetCurrentProcessId();                                                                 \
             int tid = (int)GetCurrentThreadId();                                                                  \
             char _log_buf_[1024] = {0};                                                                           \
-            if (prefix_content) {                                                                                \
+            if (prefix_content) {                                                                                 \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%03d %s [%d.%d] %s:%d @%s", \
                          st.wYear, st.wMonth, st.wDay,                                                            \
                          st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,                                      \
@@ -272,7 +270,7 @@ void __attribute__((destructor)) close_log_file(void);
         }                                                                                                         \
     } while (0)
 #else
-#define LOG(level, color, prefix_content, fmt, ...)                                                              \
+#define LOG(level, color, prefix_content, fmt, ...)                                                               \
     do {                                                                                                          \
         if (log_level >= level) {                                                                                 \
             SYSTEMTIME st = {0};                                                                                  \
@@ -280,7 +278,7 @@ void __attribute__((destructor)) close_log_file(void);
             int pid = (int)GetCurrentProcessId();                                                                 \
             int tid = (int)GetCurrentThreadId();                                                                  \
             char _log_buf_[1024] = {0};                                                                           \
-            if (prefix_content) {                                                                                \
+            if (prefix_content) {                                                                                 \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%03d %s [%d.%d] %s:%d @%s", \
                          st.wYear, st.wMonth, st.wDay,                                                            \
                          st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,                                      \
@@ -298,7 +296,7 @@ void __attribute__((destructor)) close_log_file(void);
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <unistd.h>
-#define LOG(level, color, prefix_content, fmt, args...)                                                           \
+#define LOG(level, color, prefix_content, fmt, args...)                                                            \
     do {                                                                                                           \
         if (log_level >= level) {                                                                                  \
             struct timeval tv = {0};                                                                               \
@@ -308,7 +306,7 @@ void __attribute__((destructor)) close_log_file(void);
             int pid = (int)getpid();                                                                               \
             int tid = (int)syscall(SYS_gettid);                                                                    \
             char _log_buf_[1024] = {0};                                                                            \
-            if (prefix_content) {                                                                                 \
+            if (prefix_content) {                                                                                  \
                 snprintf(_log_buf_, sizeof(_log_buf_), "%04d-%02d-%02d %02d:%02d:%02d.%06ld %s [%d.%d] %s:%d @%s", \
                          tm_info->tm_year + 1900, tm_info->tm_mon + 1, tm_info->tm_mday,                           \
                          tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec, tv.tv_usec,                           \
