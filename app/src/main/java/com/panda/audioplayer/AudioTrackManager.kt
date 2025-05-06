@@ -30,6 +30,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     private var audioFileLength: Long = 0
     private var dataCurrentOffset: Long = 0
     private var dataPauseOffset: Long = 0
+    private var dataStartOffset: Long = 0
     private var filePath: String? = null
     private var jumpFlag = false
     var onPlaybackComplete: (() -> Unit)? = null
@@ -59,7 +60,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
 
         val param = ByteBuffer.allocate(4).apply {
             order(ByteOrder.LITTLE_ENDIAN)
-            putFloat(-20.0f)
+            putFloat(-5.0f)
         }.array()
         algo.algoSetParam(algoHandle, 2, param, param.size)
     }
@@ -92,6 +93,7 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
             Logger.logi("Audio started playing $filePath")
             val wav = wavFile ?: WavFile(File(filePath))
             this.blockAlign = wav.getBlockAlign()
+            this.dataStartOffset = wav.getDataStartOffset()?.toLong() ?: 0
             if (!jumpFlag) {
                 dataCurrentOffset = wav.getDataStartOffset().toLong()
             }
@@ -189,7 +191,8 @@ fun startPlay(filePath: String, wavFile: WavFile? = null, resume: Boolean = fals
 
     fun seekTo(positionMillis: Long) {
         dataCurrentOffset = positionMillis * sampleRate / 1000 * blockAlign
-        dataCurrentOffset -= dataCurrentOffset % 4 // align to 4-byte boundary
+        dataCurrentOffset -= dataCurrentOffset % blockAlign // align to blockAlign-byte boundary
+        dataCurrentOffset += dataStartOffset
         if (isPlaying || isPaused) {
             dataCurrentOffset = dataCurrentOffset.coerceIn(0, audioFileLength - 1) // ensure offset in valid range
         } else {
