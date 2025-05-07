@@ -4,6 +4,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import com.panda.audioplayer.utils.Logger
+import java.nio.charset.Charset
 
 class WavFile(private val file: File) {
 
@@ -91,6 +92,12 @@ class WavFile(private val file: File) {
                             fis.read(infoData, 0, chunkSize)
                             parseInfoChunk(infoData)
                         }
+                        "id3 " -> {
+                            // Parse ID3 chunk
+                            val id3Data = ByteArray(chunkSize)
+                            fis.read(id3Data, 0, chunkSize)
+                            parseId3Chunk(id3Data)
+                        }
                         else -> {
                             // Skip unknown chunks
                             fis.skip(chunkSize.toLong())
@@ -163,8 +170,6 @@ class WavFile(private val file: File) {
                                     (listData[offset + 5].toUByte().toInt() shl 8) or
                                     (listData[offset + 6].toUByte().toInt() shl 16) or
                                     (listData[offset + 7].toUByte().toInt() shl 24)
-                Logger.logd("Parsing subChunk: id=$subChunkId, size=$subChunkSize")
-
                 offset += 8
 
                 if (!subChunkId.all { it.isLetterOrDigit() }) {
@@ -182,14 +187,11 @@ class WavFile(private val file: File) {
                     continue
                 }
 
-                try {
-                    val subChunkData = String(listData, offset, subChunkSize, Charsets.UTF_8)
-                    when (subChunkId) {
-                        "INAM" -> audioTitle = subChunkData
-                        "IART" -> artist = subChunkData
-                    }
-                } catch (e: Exception) {
-                    Logger.logf("Failed to decode subChunkData for id=$subChunkId: ${e.message}")
+                val subChunkData = tryDecodeString(listData, offset, subChunkSize)
+                Logger.logd("Parsing subChunk: id=$subChunkId, size=$subChunkSize, data=$subChunkData")
+                when (subChunkId) {
+                    "INAM" -> audioTitle = subChunkData
+                    "IART" -> artist = subChunkData
                 }
                 offset += subChunkSize
                 if (subChunkSize % 2 != 0) {
@@ -209,13 +211,103 @@ class WavFile(private val file: File) {
                     (infoData[offset + 7].toInt() and 0xFF shl 24)
             offset += 8
 
-            val subChunkData = String(infoData, offset, subChunkSize)
+            val subChunkData = tryDecodeString(infoData, offset, subChunkSize)
             when (subChunkId) {
                 "INAM" -> audioTitle = subChunkData // Title
                 "IART" -> artist = subChunkData // Artist
             }
             offset += subChunkSize
         }
+    }
+
+    private fun parseId3Chunk(id3Data: ByteArray) {
+        if (id3Data.size < 10) return // ID3 header is at least 10 bytes
+
+        // Check if it's a valid ID3 tag
+        val id3Header = String(id3Data, 0, 3, Charsets.UTF_8)
+        if (id3Header != "ID3") {
+            Logger.loge("Invalid ID3 tag: header=$id3Header")
+            return
+        }
+
+        // Parse ID3 header
+        val majorVersion = id3Data[3].toInt() and 0xFF
+        val minorVersion = id3Data[4].toInt() and 0xFF
+        val flags = id3Data[5].toInt() and 0xFF
+        val tagSize = (id3Data[6].toInt() and 0xFF shl 21) or
+                    (id3Data[7].toInt() and 0xFF shl 14) or
+                    (id3Data[8].toInt() and 0xFF shl 7) or
+                    (id3Data[9].toInt() and 0xFF)
+
+        Logger.logd("Parsing ID3 tag: version=$majorVersion.$minorVersion, size=$tagSize")
+
+        var offset = 10 // Start of frames
+        while (offset + 10 <= id3Data.size) {
+            // Parse frame header
+            val frameId = String(id3Data, offset, 4, Charsets.UTF_8)
+            val frameSize = (id3Data[offset + 4].toInt() and 0xFF shl 24) or
+                            (id3Data[offset + 5].toInt() and 0xFF shl 16) or
+                            (id3Data[offset + 6].toInt() and 0xFF shl 8) or
+                            (id3Data[offset + 7].toInt() and 0xFF)
+            val frameFlags = (id3Data[offset + 8].toInt() and 0xFF shl 8) or
+                            (id3Data[offset + 9].toInt() and 0xFF)
+            offset += 10
+
+            if (frameSize <= 0 || offset + frameSize > id3Data.size) {
+                Logger.logf("Invalid frame size: $frameSize, remaining bytes: ${id3Data.size - offset}")
+                break
+            }
+
+            // Parse frame data
+            val frameData = parseId3FrameData(id3Data, offset, frameSize)
+            if (frameSize <= 128) {
+                Logger.logd("Parsing ID3 frame: id=$frameId, size=$frameSize, data=$frameData")
+            } else {
+                Logger.logd("Parsing ID3 frame: id=$frameId, size=$frameSize, data=<too long to display>")                
+            }
+
+            when (frameId) {
+                "TIT2" -> audioTitle = frameData // Title
+                "TPE1" -> artist = frameData // Artist
+            }
+
+            offset += frameSize
+        }
+    }
+
+    private fun parseId3FrameData(data: ByteArray, offset: Int, size: Int): String {
+        if (size < 1) return ""
+
+        // Check the encoding byte (first byte of the frame data)
+        val encodingByte = data[offset]
+        val charset = when (encodingByte.toInt() and 0xFF) {
+            0x00 -> Charset.forName("ISO-8859-1") // ISO-8859-1
+            0x01 -> Charsets.UTF_16 // UTF-16 with BOM
+            0x02 -> Charsets.UTF_16BE // UTF-16BE
+            0x03 -> Charsets.UTF_8 // UTF-8
+            else -> Charsets.UTF_8 // Fallback to UTF-8
+        }
+
+        // Skip the encoding byte and decode the rest of the data
+        return String(data, offset + 1, size - 1, charset)
+    }
+
+    private fun tryDecodeString(data: ByteArray, offset: Int, length: Int): String {
+        val encodings = listOf(
+            Charsets.UTF_8,
+            Charsets.UTF_16,
+            Charset.forName("GBK"),
+            Charset.forName("ISO-8859-1"), // Add ISO-8859-1
+            Charset.forName("UTF-16BE") // Add UTF-16BE
+        )
+        for (charset in encodings) {
+            try {
+                return String(data, offset, length, charset)
+            } catch (e: Exception) {
+                // Ignore and try next encoding
+            }
+        }
+        return String(data, offset, length, Charsets.UTF_8) // Fallback to UTF-8
     }
 
     fun getAudioTitle(): String {
