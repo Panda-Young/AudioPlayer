@@ -11,7 +11,6 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 import com.panda.audioplayer.utils.Logger
-import com.panda.audioplayer.utils.WavFile
 
 class PlaylistAdapter(
     private var playlist: MutableList<String>,
@@ -20,7 +19,6 @@ class PlaylistAdapter(
 
     private var onItemClickListener: ((String) -> Unit)? = null
     private var selectedPosition = RecyclerView.NO_POSITION
-    private val wavFileCache = mutableMapOf<String, WavFile>()
 
     class PlaylistViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val audioFileName: TextView = itemView.findViewById(R.id.audioFileName)
@@ -44,9 +42,6 @@ class PlaylistAdapter(
             onItemClickListener?.invoke(audioFilePath)
             setSelectedPosition(position)
         }
-
-        // Get or create WavFile instance from cache
-        wavFileCache.getOrPut(audioFilePath) { WavFile(File(audioFilePath)) }
 
         // Highlight the selected item
         holder.itemView.isSelected = selectedPosition == position
