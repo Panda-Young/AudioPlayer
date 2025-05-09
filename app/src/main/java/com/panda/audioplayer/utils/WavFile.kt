@@ -18,6 +18,7 @@ class WavFile(private val file: File) {
     private var audioFormat = 1 // Default PCM format
     private var audioTitle: String? = null
     private var artist: String? = null
+    private var coverArtBytes: ByteArray? = null
 
     init {
         parseWavHeader()
@@ -187,7 +188,7 @@ class WavFile(private val file: File) {
                     continue
                 }
 
-                val subChunkData = tryDecodeString(listData, offset, subChunkSize)
+                val subChunkData = String(listData, offset, subChunkSize, Charsets.UTF_8)
                 Logger.logd("Parsing subChunk: id=$subChunkId, size=$subChunkSize, data=$subChunkData")
                 when (subChunkId) {
                     "INAM" -> audioTitle = subChunkData
@@ -211,7 +212,7 @@ class WavFile(private val file: File) {
                     (infoData[offset + 7].toInt() and 0xFF shl 24)
             offset += 8
 
-            val subChunkData = tryDecodeString(infoData, offset, subChunkSize)
+            val subChunkData = String(infoData, offset, subChunkSize, Charsets.UTF_8)
             when (subChunkId) {
                 "INAM" -> audioTitle = subChunkData // Title
                 "IART" -> artist = subChunkData // Artist
@@ -269,6 +270,7 @@ class WavFile(private val file: File) {
             when (frameId) {
                 "TIT2" -> audioTitle = frameData // Title
                 "TPE1" -> artist = frameData // Artist
+                "APIC" -> coverArtBytes = parseAPICFrame(id3Data, offset, frameSize) // Cover art
             }
 
             offset += frameSize
@@ -292,22 +294,56 @@ class WavFile(private val file: File) {
         return String(data, offset + 1, size - 1, charset)
     }
 
-    private fun tryDecodeString(data: ByteArray, offset: Int, length: Int): String {
-        val encodings = listOf(
-            Charsets.UTF_8,
-            Charsets.UTF_16,
-            Charset.forName("GBK"),
-            Charset.forName("ISO-8859-1"), // Add ISO-8859-1
-            Charset.forName("UTF-16BE") // Add UTF-16BE
-        )
-        for (charset in encodings) {
-            try {
-                return String(data, offset, length, charset)
-            } catch (e: Exception) {
-                // Ignore and try next encoding
+    private fun parseAPICFrame(data: ByteArray, offset: Int, size: Int): ByteArray? {
+        // Minimum length check: 1 byte encoding + at least 15 bytes metadata
+        if (size < 16) return null
+
+        var currentOffset = offset
+        val encodingByte = data[currentOffset++].toInt() and 0xFF
+        val charset = when (encodingByte) {
+            0x00 -> Charsets.ISO_8859_1
+            0x01 -> Charsets.UTF_16
+            else -> Charsets.ISO_8859_1
+        }
+
+        // Skip MIME type (null-terminated string)
+        while (currentOffset < offset + size && data[currentOffset++].toInt() != 0) {}
+
+        // Skip image type (1 byte) and description (encoding-dependent string)
+        currentOffset++ // Skip image type
+
+        // Calculate description length and skip
+        val descriptionLength = when (charset) {
+            Charsets.UTF_16 -> {
+                var len = 0
+                while (currentOffset + 1 < offset + size) {
+                    if (data[currentOffset].toInt() == 0 && data[currentOffset + 1].toInt() == 0) break
+                    currentOffset += 2
+                    len += 2
+                }
+                len + 2
+            }
+            else -> {
+                var len = 0
+                while (currentOffset < offset + size && data[currentOffset++].toInt() != 0) {
+                    len++
+                }
+                len + 1
             }
         }
-        return String(data, offset, length, Charsets.UTF_8) // Fallback to UTF-8
+
+        // Extract image data
+        val imageDataStart = currentOffset
+        val imageDataLength = size - (imageDataStart - offset)
+        return if (imageDataLength > 0) {
+            data.copyOfRange(imageDataStart, imageDataStart + imageDataLength)
+        } else {
+            null
+        }
+    }
+
+    fun getCoverArt(): ByteArray? {
+        return coverArtBytes
     }
 
     fun getAudioTitle(): String {

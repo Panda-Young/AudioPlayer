@@ -20,6 +20,7 @@ import com.panda.audioplayer.utils.WavFile
 import androidx.core.view.isVisible
 import android.content.Context
 import java.io.File
+import com.bumptech.glide.Glide
 
 class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
@@ -289,6 +290,17 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         artistTextView.text = wavFile.getArtist()
         viewInitializer.seekBar.max = totalDuration
         viewInitializer.totalTime.text = formatTime(totalDuration)
+
+        val audioCover = findViewById<ImageView>(R.id.audio_cover)
+        val coverArt = wavFile.getCoverArt()
+        if (coverArt != null) {
+            Glide.with(this)
+                .load(coverArt)
+                .placeholder(R.drawable.ic_launcher_foreground)
+                .into(audioCover)
+        } else {
+            audioCover.setImageResource(R.drawable.ic_launcher_foreground)
+        }
     }
 
     private fun togglePlayPause() {
