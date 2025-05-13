@@ -151,6 +151,9 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                         isCompleted = true
                         onPlaybackComplete?.invoke()
                         Logger.logi("Audio playback completed")
+                        if (algoHandle != 0L) {
+                            algo.algoDeinit(algoHandle)
+                        }
                     }
                 } catch (e: IOException) {
                     Logger.logf("Error during playback: ${e.message}")
