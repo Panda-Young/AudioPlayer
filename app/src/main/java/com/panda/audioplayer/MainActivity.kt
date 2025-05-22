@@ -35,6 +35,9 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     private lateinit var permissionHandler: PermissionHandler
     private lateinit var audioManager: AudioManager
     private lateinit var audioTrackManager: AudioTrackManager
+    private lateinit var effectRecyclerView: RecyclerView
+    private lateinit var effectAdapter: EffectAdapter
+    private lateinit var effectManager: EffectManager
     private val playlist = mutableListOf<String>()
     private val handler = Handler(Looper.getMainLooper())
     private var currentLoopMode: LoopMode = LoopMode.REPEAT_ALL // Default to repeat all
@@ -81,6 +84,35 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
             updateAudioInfo(wavFile)
             handler.post(updateSeekBarRunnable)
         }
+
+        effectManager = EffectManager(audioTrackManager)
+
+        effectAdapter = EffectAdapter(effectManager) { name, state ->
+            Logger.logi("Effect $name ${if (state) "enabled" else "disabled"}")
+        }
+
+        // Initialize effect recycler view
+        effectRecyclerView = findViewById(R.id.effect_recycler_view)
+        effectRecyclerView.layoutManager = LinearLayoutManager(this)
+        effectRecyclerView.adapter = effectAdapter
+
+        val effectButton: ImageView = findViewById(R.id.effect_button)
+        effectButton.setOnClickListener {
+            effectRecyclerView.visibility = if (effectRecyclerView.visibility == View.VISIBLE) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
+        }
+    }
+
+    private fun handleEffectToggle(effectName: String, enabled: Boolean) {
+        when (effectName) {
+            "Reverb" -> audioTrackManager.setReverbEffect(enabled)
+            "Equalizer" -> audioTrackManager.setEqualizerEffect(enabled)
+            "3D Audio" -> audioTrackManager.set3DEffect(enabled)
+        }
+        Logger.logi("Effect $effectName ${if (enabled) "enabled" else "disabled"}")
     }
 
     private fun loadAudioFiles() {

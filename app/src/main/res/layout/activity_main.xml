@@ -213,4 +213,14 @@
             app:layout_constraintBottom_toBottomOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/effect_recycler_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintWidth_percent="0.75"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/top_info_area"
+        app:layout_constraintBottom_toTopOf="@id/bottom_control_area"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

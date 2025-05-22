@@ -1,0 +1,21 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="4dp">
+
+    <TextView
+        android:id="@+id/effect_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/default_effect_name"
+        android:textSize="16sp" />
+
+    <ImageView
+        android:id="@+id/effect_switch"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_switch_off"
+        android:contentDescription="@string/effect_switch" />
+</LinearLayout>
