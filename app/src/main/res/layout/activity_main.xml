@@ -14,6 +14,18 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_begin="48dp" />
 
+    <ImageView
+        android:id="@+id/effect_button"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_effect"
+        android:contentDescription="@string/effect"
+        app:layout_constraintTop_toBottomOf="@id/guideline_top"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="16dp"
+        tools:ignore="ImageContrastCheck" />
+
     <LinearLayout
         android:id="@+id/top_info_area"
         android:layout_width="match_parent"

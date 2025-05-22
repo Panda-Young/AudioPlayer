@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">AudioPlayer</string>
+    <string name="effect">Effect</string>
     <string name="audio_cover">Audio Cover</string>
     <string name="audio_title">Audio Title</string>
     <string name="audio_artist">Audio Artist</string>
