@@ -31,6 +31,12 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         SHUFFLE     // Shuffle the playlist
     }
 
+    private var currentVisibleView: VisibleView = VisibleView.NONE
+
+    enum class VisibleView {
+        EFFECTS, PLAYLIST, NONE
+    }
+
     private lateinit var viewInitializer: ViewInitializer
     private lateinit var permissionHandler: PermissionHandler
     private lateinit var audioManager: AudioManager
@@ -98,10 +104,15 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
         val effectButton: ImageView = findViewById(R.id.effect_button)
         effectButton.setOnClickListener {
-            effectRecyclerView.visibility = if (effectRecyclerView.visibility == View.VISIBLE) {
-                View.GONE
+            if (currentVisibleView == VisibleView.EFFECTS) {
+                effectRecyclerView.visibility = View.GONE
+                currentVisibleView = VisibleView.NONE
             } else {
-                View.VISIBLE
+                if (viewInitializer.playlistRecyclerView.isVisible) {
+                    togglePlaylistVisibility()
+                }
+                effectRecyclerView.visibility = View.VISIBLE
+                currentVisibleView = VisibleView.EFFECTS
             }
         }
     }
@@ -357,24 +368,31 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     private fun togglePlaylistVisibility() {
-        if (viewInitializer.playlistRecyclerView.visibility == View.VISIBLE) {
+        if (currentVisibleView == VisibleView.PLAYLIST) {
             viewInitializer.playlistRecyclerView.animate()
                 .alpha(0f)
                 .setDuration(300)
                 .withEndAction {
                     viewInitializer.playlistRecyclerView.visibility = View.GONE
                     viewInitializer.playlistControlArea.visibility = View.GONE
+                    currentVisibleView = VisibleView.NONE
                 }
         } else {
+            if (effectRecyclerView.isVisible) {
+                effectRecyclerView.visibility = View.GONE
+                currentVisibleView = VisibleView.NONE
+            }
+
+            viewInitializer.playlistRecyclerView.layoutParams.height =
+                resources.getDimensionPixelSize(R.dimen.playlist_height)
             viewInitializer.playlistRecyclerView.alpha = 0f
             viewInitializer.playlistRecyclerView.visibility = View.VISIBLE
             viewInitializer.playlistControlArea.visibility = View.VISIBLE
-            viewInitializer.playlistRecyclerView.layoutParams.height = resources.getDimensionPixelSize(R.dimen.playlist_height)
             viewInitializer.playlistRecyclerView.animate()
                 .alpha(1f)
                 .setDuration(300)
+            currentVisibleView = VisibleView.PLAYLIST
         }
-        viewInitializer.playlistRecyclerView.requestLayout()
     }
 
     private fun updateSeekBar() {
