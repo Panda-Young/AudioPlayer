@@ -12,6 +12,52 @@ import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 import com.panda.audioplayer.utils.Logger
 
+class PlaylistManager(
+    private val context: Context,
+    private val adapter: PlaylistAdapter,
+    initialLoopMode: LoopMode = LoopMode.REPEAT_ALL
+) {
+    enum class LoopMode { REPEAT_ONE, REPEAT_ALL, SHUFFLE }
+    
+    private var currentLoopMode: LoopMode = initialLoopMode
+    private val playlist = mutableListOf<String>()
+    
+    fun getPlaylist(): List<String> = playlist.toList()
+
+    fun getNextPosition(currentPosition: Int): Int {
+        return when (currentLoopMode) {
+            LoopMode.REPEAT_ONE -> currentPosition
+            LoopMode.REPEAT_ALL -> (currentPosition + 1) % playlist.size
+            LoopMode.SHUFFLE -> (0 until playlist.size).random()
+        }
+    }
+
+    fun getPreviousPosition(currentPosition: Int): Int {
+        return when (currentLoopMode) {
+            LoopMode.REPEAT_ONE -> currentPosition
+            LoopMode.REPEAT_ALL -> if (currentPosition - 1 < 0) playlist.size - 1 else currentPosition - 1
+            LoopMode.SHUFFLE -> (0 until playlist.size).random()
+        }
+    }
+
+    fun toggleLoopMode() {
+        currentLoopMode = when (currentLoopMode) {
+            LoopMode.REPEAT_ONE -> LoopMode.REPEAT_ALL
+            LoopMode.REPEAT_ALL -> LoopMode.SHUFFLE
+            LoopMode.SHUFFLE -> LoopMode.REPEAT_ONE
+        }
+    }
+
+    fun getCurrentLoopMode() = currentLoopMode
+
+    fun refreshPlaylist(newFiles: List<String>) {
+        playlist.clear()
+        playlist.addAll(newFiles)
+        adapter.updateData(playlist.toMutableList())
+        adapter.setSelectedPosition(0)
+    }
+}
+
 class PlaylistAdapter(
     private var playlist: MutableList<String>,
     private val onRemoveClickListener: (String) -> Unit
@@ -86,5 +132,10 @@ class PlaylistAdapter(
 
     fun getSelectedPosition(): Int {
         return selectedPosition
+    }
+
+    fun updateData(newList: MutableList<String>) {
+        playlist = newList
+        notifyDataSetChanged()
     }
 }
