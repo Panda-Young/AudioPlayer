@@ -5,7 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import com.panda.audioplayer.utils.Logger
 import com.panda.audioplayer.utils.WavFile
-import com.panda.audioplayer.utils.AudioDataConverter
+import com.panda.audioplayer.utils.DataConverter
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -122,22 +122,22 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                         val read = audioFile?.read(buffer) ?: 0
                         if (read > 0) {
                             val convertedBuffer = when (fileBitDepth) {
-                                8 -> AudioDataConverter.convert8BitTo16Bit(buffer)
-                                24 -> AudioDataConverter.convert24BitTo16Bit(buffer)
+                                8 -> DataConverter.convert8BitTo16Bit(buffer)
+                                24 -> DataConverter.convert24BitTo16Bit(buffer)
                                 32 -> {
                                     when (fileAudioFormat) {
-                                        1 -> AudioDataConverter.convert32BitIntTo16Bit(buffer) // 32-bit int
-                                        3 -> AudioDataConverter.convert32BitFloatTo16Bit(buffer) // 32-bit float
+                                        1 -> DataConverter.convert32BitIntTo16Bit(buffer) // 32-bit int
+                                        3 -> DataConverter.convert32BitFloatTo16Bit(buffer) // 32-bit float
                                         else -> buffer // use raw data
                                     }
                                 }
                                 else -> buffer // use raw data
                             }
                             // audioTrack?.write(convertedBuffer, 0, convertedBuffer.size)
-                            val floatInput = AudioDataConverter.byteArrayToFloatArray(convertedBuffer)
+                            val floatInput = DataConverter.byteArrayToFloatArray(convertedBuffer)
                             val floatOutput = FloatArray(floatInput.size)
                             algo.algoProcess(algoHandle, floatInput, floatOutput, floatOutput.size)
-                            audioTrack?.write(AudioDataConverter.floatArrayToByteArray(floatOutput), 0, convertedBuffer.size)
+                            audioTrack?.write(DataConverter.floatArrayToByteArray(floatOutput), 0, convertedBuffer.size)
                         }
 
                         if (isPaused) {

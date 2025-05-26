@@ -3,7 +3,7 @@ package com.panda.audioplayer.utils
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-object AudioDataConverter {
+object DataConverter {
 
     fun convert8BitTo16Bit(data: ByteArray): ByteArray {
         val convertedData = ByteArray(data.size * 2)
