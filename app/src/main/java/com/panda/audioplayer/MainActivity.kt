@@ -190,14 +190,14 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
     private fun playPrevious() {
         val currentPosition = viewInitializer.playlistAdapter.getSelectedPosition()
-        val newPosition = playlistManager.getPreviousPosition(currentPosition)
+        val newPosition = playlistManager.getButtonPreviousPosition(currentPosition)
         viewInitializer.playlistAdapter.setSelectedPosition(newPosition)
         switchToNewAudio(playlistManager.getPlaylist()[newPosition])
     }
 
     private fun playNext() {
         val currentPosition = viewInitializer.playlistAdapter.getSelectedPosition()
-        val newPosition = playlistManager.getNextPosition(currentPosition)
+        val newPosition = playlistManager.getButtonNextPosition(currentPosition)
         viewInitializer.playlistAdapter.setSelectedPosition(newPosition)
         switchToNewAudio(playlistManager.getPlaylist()[newPosition])
     }
@@ -220,7 +220,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     // Handle playback completion based on the current loop mode
     private fun handlePlaybackCompletion() {
         val currentPosition = viewInitializer.playlistAdapter.getSelectedPosition()
-        val newPosition = playlistManager.getNextPosition(currentPosition)
+        val newPosition = playlistManager.getAutoNextPosition(currentPosition)
         viewInitializer.playlistAdapter.setSelectedPosition(newPosition)
         switchToNewAudio(playlistManager.getPlaylist()[newPosition])
     }

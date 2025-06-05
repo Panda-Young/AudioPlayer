@@ -24,18 +24,26 @@ class PlaylistManager(
     
     fun getPlaylist(): List<String> = playlist.toList()
 
-    fun getNextPosition(currentPosition: Int): Int {
+    fun getButtonNextPosition(currentPosition: Int): Int {
         return when (currentLoopMode) {
-            LoopMode.REPEAT_ONE -> currentPosition
-            LoopMode.REPEAT_ALL -> (currentPosition + 1) % playlist.size
+            LoopMode.REPEAT_ONE, LoopMode.REPEAT_ALL ->
+                (currentPosition + 1) % playlist.size
             LoopMode.SHUFFLE -> (0 until playlist.size).random()
         }
     }
 
-    fun getPreviousPosition(currentPosition: Int): Int {
+    fun getButtonPreviousPosition(currentPosition: Int): Int {
+        return when (currentLoopMode) {
+            LoopMode.REPEAT_ONE, LoopMode.REPEAT_ALL ->
+                if (currentPosition - 1 < 0) playlist.size - 1 else currentPosition - 1
+            LoopMode.SHUFFLE -> (0 until playlist.size).random()
+        }
+    }
+
+    fun getAutoNextPosition(currentPosition: Int): Int {
         return when (currentLoopMode) {
             LoopMode.REPEAT_ONE -> currentPosition
-            LoopMode.REPEAT_ALL -> if (currentPosition - 1 < 0) playlist.size - 1 else currentPosition - 1
+            LoopMode.REPEAT_ALL -> (currentPosition + 1) % playlist.size
             LoopMode.SHUFFLE -> (0 until playlist.size).random()
         }
     }
