@@ -31,6 +31,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     internal var isCompleted = false
     private var isPaused = false
     private var audioFileLength: Long = 0
+    private var dataChunkSize: Long = 0
     private var dataCurrentOffset: Long = 0
     private var dataPauseOffset: Long = 0
     private var dataChunkOffset: Long = 0
@@ -103,6 +104,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                 this.fileBitDepth = wav.getBitDepth()
                 this.fileAudioFormat = wav.getAudioFormat()
                 this.dataChunkOffset = wav.getDataStartOffset()?.toLong() ?: 0
+                this.dataChunkSize = wav.getAudioDataSize()?.toLong() ?: 0
                 if (!jumpFlag) {
                     dataCurrentOffset = dataChunkOffset
                 }
@@ -118,8 +120,16 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
             Thread {
                 try {
                     val buffer = ByteArray(minBufferSize)
-                    while (isPlaying && audioFile?.filePointer ?: 0 < audioFileLength) {
-                        val read = audioFile?.read(buffer) ?: 0
+                    val dataChunkEnd = dataChunkOffset + dataChunkSize
+                    while (isPlaying && audioFile?.filePointer ?: 0L < dataChunkEnd) {
+                        buffer.fill(0)
+                        var read = 0
+                        if ((audioFile?.filePointer ?: 0L) + buffer.size > dataChunkEnd) {
+                            val remainingBytes = dataChunkEnd - (audioFile?.filePointer ?: 0)
+                            read = audioFile?.read(buffer, 0, remainingBytes.toInt()) ?: 0
+                        } else {
+                            read = audioFile?.read(buffer) ?: 0
+                        }
                         if (read > 0) {
                             val convertedBuffer = when (fileBitDepth) {
                                 8 -> DataConverter.convert8BitTo16Bit(buffer)
@@ -146,7 +156,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                             break
                         }
                     }
-                    if (isPlaying && audioFile?.filePointer ?: 0 >= audioFileLength) {
+                    if (isPlaying && audioFile?.filePointer ?: 0L >= dataChunkEnd) {
                         isPlaying = false
                         isCompleted = true
                         onPlaybackComplete?.invoke()
