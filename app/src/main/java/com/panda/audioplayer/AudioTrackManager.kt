@@ -39,7 +39,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     private var jumpFlag = false
     var onPlaybackComplete: (() -> Unit)? = null
     private var algoHandle: Long = 0
-    private val algo = AlgoExample()
+    private val algo = Gain()
 
     init {
         initializeAudioTrack()
@@ -246,8 +246,8 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     }
 
     // Placeholder implementations
-    fun setReverbEffect(enabled: Boolean) {
-        // TODO: Implement reverb effect
+    fun setGainEffect(enabled: Boolean) {
+        // TODO: Implement Gain effect
     }
 
     fun setEqualizerEffect(enabled: Boolean) {

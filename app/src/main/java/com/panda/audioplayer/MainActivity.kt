@@ -110,7 +110,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
     private fun handleEffectToggle(effectName: String, enabled: Boolean) {
         when (effectName) {
-            "Reverb" -> audioTrackManager.setReverbEffect(enabled)
+            "Gain" -> audioTrackManager.setGainEffect(enabled)
             "Equalizer" -> audioTrackManager.setEqualizerEffect(enabled)
             "3D Audio" -> audioTrackManager.set3DEffect(enabled)
         }

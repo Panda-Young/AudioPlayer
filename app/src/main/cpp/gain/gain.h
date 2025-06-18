@@ -6,8 +6,8 @@
  * Copyright (c) 2024 by Panda-Young, All Rights Reserved.
  **************************************************************************/
 
-#ifndef _ALGO_EXAMPLE_H
-#define _ALGO_EXAMPLE_H
+#ifndef _GAIN_H
+#define _GAIN_H
 
 #ifdef __cplusplus
 extern "C" {

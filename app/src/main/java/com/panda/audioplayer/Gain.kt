@@ -2,9 +2,9 @@ package com.panda.audioplayer
 
 import com.panda.audioplayer.utils.Logger
 
-class AlgoExample {
-    init { System.loadLibrary("algo_jni") 
-        Logger.logi("AlgoExample library loaded")
+class Gain {
+    init { System.loadLibrary("gain_jni") 
+        Logger.logi("Gain library loaded")
     }
 
     external fun getAlgoVersion(version: ByteArray): Int

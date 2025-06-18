@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 
 class EffectManager(private val audioTrackManager: AudioTrackManager) {
     private val effects = mutableMapOf(
-        "Reverb" to false,
+        "Gain" to false,
         "Equalizer" to false,
         "3D Audio" to false
     )
@@ -21,7 +21,7 @@ class EffectManager(private val audioTrackManager: AudioTrackManager) {
 
     private fun applyEffect(effectName: String) {
         when (effectName) {
-            "Reverb" -> audioTrackManager.setReverbEffect(effects[effectName] == true)
+            "Gain" -> audioTrackManager.setGainEffect(effects[effectName] == true)
             "Equalizer" -> audioTrackManager.setEqualizerEffect(effects[effectName] == true)
             "3D Audio" -> audioTrackManager.set3DEffect(effects[effectName] == true)
         }

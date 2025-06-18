@@ -6,10 +6,10 @@
  * Copyright (c) 2024 by Panda-Young, All Rights Reserved.
  **************************************************************************/
 
-#include "algo_example.h"
+#include "gain.h"
 #include "log.h"
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
 
 #define VERSION "0.1.2"
 #define MAX_BUF_SIZE 1024
@@ -25,7 +25,7 @@ static int validate_param_size(int received_size, int expected_size, const char 
 {
     if (received_size != expected_size) {
         LOGE("Received param size %d Bytes for %s is not correct. Expected size is %d",
-                   received_size, param_name, expected_size);
+             received_size, param_name, expected_size);
         return E_PARAM_SIZE_INVALID;
     }
     return E_OK;
@@ -99,7 +99,7 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM3:
         if (param_size > MAX_BUF_SIZE) {
             LOGE("Received param size: %d Bytes is too large. Max size is %u",
-                       param_size, MAX_BUF_SIZE);
+                 param_size, MAX_BUF_SIZE);
             return E_PARAM_SIZE_INVALID;
         }
         memset(algo_handle_ptr->param3, 0, MAX_BUF_SIZE);
@@ -109,7 +109,7 @@ int algo_set_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     case ALGO_PARAM4:
         if (param_size > MAX_BUF_SIZE) {
             LOGE("Received param size: %d Bytes is too large. Max size is %u",
-                       param_size, MAX_BUF_SIZE);
+                 param_size, MAX_BUF_SIZE);
             return E_PARAM_SIZE_INVALID;
         }
         algo_handle_ptr->param4 = (float *)malloc(param_size);
@@ -176,7 +176,8 @@ int algo_get_param(void *algo_handle, algo_param_t cmd, void *param, int param_s
     return ret;
 }
 
-float dBtoGain(float dB) {
+float dBtoGain(float dB)
+{
     return powf(10.0f, dB / 20.0f);
 }
 
