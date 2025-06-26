@@ -39,35 +39,35 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     private var filePath: String? = null
     private var jumpFlag = false
     var onPlaybackComplete: (() -> Unit)? = null
-    private var algoHandle: Long = 0
-    private val algo = Gain()
+    private var gainHandle: Long = 0
+    private val gainModule = Gain()
 
     init {
         initializeAudioTrack()
     }
 
-    private fun initAlgorithm() {
-        val version = ByteArray(1024)
-        if (algo.getAlgoVersion(version) != 0) {
-            Logger.logf("Failed to get algo version")
+    private fun initGainModule() {
+        val gainVersion = ByteArray(1024)
+        if (gainModule.getGainVersion(gainVersion) != 0) {
+            Logger.logf("Failed to get gainModule version")
             return
         }
 
         var endIndex = 0
-        while (endIndex < version.size && version[endIndex].toInt() != 0) {
+        while (endIndex < gainVersion.size && gainVersion[endIndex].toInt() != 0) {
             endIndex++
         }
-        val validVersionBytes = version.copyOfRange(0, endIndex)
-        val versionString = String(validVersionBytes)
+        val validVersionBytes = gainVersion.copyOfRange(0, endIndex)
+        val gainVersionString = String(validVersionBytes)
 
-        Logger.logi("Algorithm version: $versionString")
-        algoHandle = algo.algoInit()
+        Logger.logi("gain module version: $gainVersionString")
+        gainHandle = gainModule.gainInit()
 
         val param = ByteBuffer.allocate(4).apply {
             order(ByteOrder.LITTLE_ENDIAN)
             putFloat(-5.0f)
         }.array()
-        algo.algoSetParam(algoHandle, 2, param, param.size)
+        gainModule.gainSetParam(gainHandle, 2, param, param.size)
     }
 
     private fun initializeAudioTrack() {
@@ -95,7 +95,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                 audioFile?.seek(dataPauseOffset)
             } else {
                 stopPlay()
-                initAlgorithm()
+                initGainModule()
                 this.filePath = filePath
                 audioFile = RandomAccessFile(filePath, "r")
                 Logger.logi("Audio started playing $filePath")
@@ -147,7 +147,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                             // audioTrack?.write(convertedBuffer, 0, convertedBuffer.size)
                             val floatInput = DataConverter.byteArrayToFloatArray(convertedBuffer)
                             val floatOutput = FloatArray(floatInput.size)
-                            algo.algoProcess(algoHandle, floatInput, floatOutput, floatOutput.size)
+                            gainModule.gainProcess(gainHandle, floatInput, floatOutput, floatOutput.size)
                             audioTrack?.write(DataConverter.floatArrayToByteArray(floatOutput), 0, convertedBuffer.size)
                         }
 
@@ -162,8 +162,8 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                         isCompleted = true
                         onPlaybackComplete?.invoke()
                         Logger.logi("Audio playback completed")
-                        if (algoHandle != 0L) {
-                            algo.algoDeinit(algoHandle)
+                        if (gainHandle != 0L) {
+                            gainModule.gainDeinit(gainHandle)
                         }
                     }
                 } catch (e: IOException) {
@@ -177,8 +177,8 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
 
     fun stopPlay() {
         isPlaying = false
-        if (algoHandle != 0L) {
-            algo.algoDeinit(algoHandle)
+        if (gainHandle != 0L) {
+            gainModule.gainDeinit(gainHandle)
         }
         audioTrack?.stop()
         audioTrack?.flush()
