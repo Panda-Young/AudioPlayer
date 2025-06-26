@@ -17,6 +17,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import com.panda.audioplayer.permission.PermissionManager
 import com.panda.audioplayer.utils.Logger
 import com.panda.audioplayer.utils.WavFile
+import com.panda.audioplayer.algos.Gain
 import androidx.core.view.isVisible
 import android.content.Context
 import java.io.File

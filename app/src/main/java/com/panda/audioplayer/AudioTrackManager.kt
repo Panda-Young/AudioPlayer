@@ -6,6 +6,7 @@ import android.media.AudioTrack
 import com.panda.audioplayer.utils.Logger
 import com.panda.audioplayer.utils.WavFile
 import com.panda.audioplayer.utils.DataConverter
+import com.panda.audioplayer.algos.Gain
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile

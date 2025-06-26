@@ -1,4 +1,4 @@
-package com.panda.audioplayer
+package com.panda.audioplayer.algos
 
 import com.panda.audioplayer.utils.Logger
 

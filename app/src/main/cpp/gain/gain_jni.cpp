@@ -1,9 +1,17 @@
+/* **************************************************************************
+ * @Description: gain moodule jni interface
+ * @Version: 0.1.0
+ * @Author: pandapan@aactechnologies.com
+ * @Date: 2025-06-26 16:09:38
+ * @Copyright (c) 2025 by @AAC Technologies, All Rights Reserved.
+ **************************************************************************/
+
 #include "gain.h"
 #include <jni.h>
 
 extern "C" {
 JNIEXPORT jint JNICALL
-Java_com_panda_audioplayer_Gain_getAlgoVersion(JNIEnv *env, jobject thiz, jbyteArray version)
+Java_com_panda_audioplayer_algos_Gain_getAlgoVersion(JNIEnv *env, jobject thiz, jbyteArray version)
 {
     jbyte *versionBytes = env->GetByteArrayElements(version, 0);
     int result = get_algo_version((char *)versionBytes);
@@ -12,19 +20,19 @@ Java_com_panda_audioplayer_Gain_getAlgoVersion(JNIEnv *env, jobject thiz, jbyteA
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_panda_audioplayer_Gain_algoInit(JNIEnv *env, jobject thiz)
+Java_com_panda_audioplayer_algos_Gain_algoInit(JNIEnv *env, jobject thiz)
 {
     return (jlong)algo_init();
 }
 
 JNIEXPORT void JNICALL
-Java_com_panda_audioplayer_Gain_algoDeinit(JNIEnv *env, jobject thiz, jlong algo_handle)
+Java_com_panda_audioplayer_algos_Gain_algoDeinit(JNIEnv *env, jobject thiz, jlong algo_handle)
 {
     algo_deinit((void *)algo_handle);
 }
 
 JNIEXPORT jint JNICALL
-Java_com_panda_audioplayer_Gain_algoSetParam(JNIEnv *env, jobject thiz, jlong algo_handle, jint cmd, jbyteArray param, jint param_size)
+Java_com_panda_audioplayer_algos_Gain_algoSetParam(JNIEnv *env, jobject thiz, jlong algo_handle, jint cmd, jbyteArray param, jint param_size)
 {
     jbyte *paramArray = env->GetByteArrayElements(param, 0);
     int result = algo_set_param((void *)algo_handle, (algo_param_t)cmd, paramArray, param_size);
@@ -33,7 +41,7 @@ Java_com_panda_audioplayer_Gain_algoSetParam(JNIEnv *env, jobject thiz, jlong al
 }
 
 JNIEXPORT jint JNICALL
-Java_com_panda_audioplayer_Gain_algoGetParam(JNIEnv *env, jobject thiz, jlong algo_handle, jint cmd, jbyteArray param, jint param_size)
+Java_com_panda_audioplayer_algos_Gain_algoGetParam(JNIEnv *env, jobject thiz, jlong algo_handle, jint cmd, jbyteArray param, jint param_size)
 {
     jbyte *paramArray = env->GetByteArrayElements(param, 0);
     int result = algo_get_param((void *)algo_handle, (algo_param_t)cmd, paramArray, param_size);
@@ -42,7 +50,7 @@ Java_com_panda_audioplayer_Gain_algoGetParam(JNIEnv *env, jobject thiz, jlong al
 }
 
 JNIEXPORT jint JNICALL
-Java_com_panda_audioplayer_Gain_algoProcess(JNIEnv *env, jobject thiz, jlong algo_handle, jfloatArray input, jfloatArray output, jint sample_count)
+Java_com_panda_audioplayer_algos_Gain_algoProcess(JNIEnv *env, jobject thiz, jlong algo_handle, jfloatArray input, jfloatArray output, jint sample_count)
 {
     jfloat *inputArray = env->GetFloatArrayElements(input, 0);
     jfloat *outputArray = env->GetFloatArrayElements(output, 0);
