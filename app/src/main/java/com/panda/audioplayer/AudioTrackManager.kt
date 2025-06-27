@@ -9,6 +9,7 @@ import com.panda.audioplayer.utils.DataConverter
 import com.panda.audioplayer.algos.Gain
 import com.panda.audioplayer.algos.Mss
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
@@ -44,6 +45,11 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     private val gainModule = Gain() // instance
     private var mssHandle: Long = 0
     private val mssModule = Mss()
+    private var inputDumpStream: FileOutputStream? = null
+    private var outputDumpStream: FileOutputStream? = null
+    companion object {
+        var isDumpEnabled = false
+    }
 
     init {
         initializeAudioTrack()
@@ -133,6 +139,19 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                 }
                 audioFileLength = audioFile?.length() ?: 0
                 audioFile?.seek(dataCurrentOffset)
+                if (isDumpEnabled) {
+                    val dumpDir = File(File(filePath).parent, "AudioDump")
+                    if (!dumpDir.exists()) dumpDir.mkdirs()
+                    val timestamp = System.currentTimeMillis()
+                    val inputFile = File(dumpDir, "input_$timestamp.pcm")
+                    val outputFile = File(dumpDir, "output_$timestamp.pcm")
+                    inputDumpStream = FileOutputStream(inputFile)
+                    outputDumpStream = FileOutputStream(outputFile)
+                    Logger.logi("start record: $inputFile $outputFile")
+                } else {
+                    inputDumpStream = null
+                    outputDumpStream = null
+                }
             }
             isPlaying = true
             isPaused = false
@@ -146,14 +165,14 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                     val dataChunkEnd = dataChunkOffset + dataChunkSize
                     while (isPlaying && audioFile?.filePointer ?: 0L < dataChunkEnd) {
                         buffer.fill(0)
-                        var read = 0
-                        if ((audioFile?.filePointer ?: 0L) + buffer.size > dataChunkEnd) {
+                        var read = if ((audioFile?.filePointer ?: 0L) + buffer.size > dataChunkEnd) {
                             val remainingBytes = dataChunkEnd - (audioFile?.filePointer ?: 0)
-                            read = audioFile?.read(buffer, 0, remainingBytes.toInt()) ?: 0
+                            audioFile?.read(buffer, 0, remainingBytes.toInt()) ?: 0
                         } else {
-                            read = audioFile?.read(buffer) ?: 0
+                            audioFile?.read(buffer) ?: 0
                         }
                         if (read > 0) {
+                            inputDumpStream?.write(buffer, 0, read)
                             val convertedBuffer = when (fileBitDepth) {
                                 8 -> DataConverter.convert8BitTo16Bit(buffer)
                                 24 -> DataConverter.convert24BitTo16Bit(buffer)
@@ -170,7 +189,9 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                             val floatInput = DataConverter.byteArrayToFloatArray(convertedBuffer)
                             val floatOutput = FloatArray(floatInput.size)
                             gainModule.gainProcess(gainHandle, floatInput, floatOutput, floatOutput.size)
-                            audioTrack?.write(DataConverter.floatArrayToByteArray(floatOutput), 0, convertedBuffer.size)
+                            val outputData = DataConverter.floatArrayToByteArray(floatOutput)
+                            outputDumpStream?.write(outputData)
+                            audioTrack?.write(outputData, 0, convertedBuffer.size)
                         }
 
                         if (isPaused) {
@@ -212,6 +233,16 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
             audioFile?.close()
         } catch (e: IOException) {
             Logger.logf("Error closing audio file: ${e.message}")
+        }
+        if (isDumpEnabled) {
+            try {
+                inputDumpStream?.flush()
+                outputDumpStream?.flush()
+                inputDumpStream?.close()
+                outputDumpStream?.close()
+            } catch (e: IOException) {
+                Logger.logf("error close dump file: ${e.message}")
+            }
         }
     }
 
@@ -283,5 +314,9 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
 
     fun set3DEffect(enabled: Boolean) {
         // TODO: Implement 3D audio
+    }
+
+    fun setDumpEnabled(enabled: Boolean) {
+        isDumpEnabled = enabled
     }
 }
