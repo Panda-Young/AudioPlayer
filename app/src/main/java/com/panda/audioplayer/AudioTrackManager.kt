@@ -95,6 +95,23 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
 
         Logger.logi("mss module version: $mssVersionString")
         mssHandle = mssModule.mssWrapperInit()
+        if (mssHandle == 0L) {
+            Logger.loge("failed to initialize mss module")
+            return
+        }
+
+        val enableValue = ByteBuffer.allocate(4).apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+            putInt(1)
+        }.array()
+        val disableValue = ByteBuffer.allocate(4).apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+            putInt(0)
+        }.array()
+        mssModule.mssWrapperSetParam(mssHandle, 1, enableValue, enableValue.size)
+        mssModule.mssWrapperSetParam(mssHandle, 2, disableValue, disableValue.size)
+        mssModule.mssWrapperSetParam(mssHandle, 3, disableValue, disableValue.size)
+        mssModule.mssWrapperSetParam(mssHandle, 4, disableValue, disableValue.size)
     }
 
     private fun initializeAudioTrack() {
@@ -126,7 +143,7 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                 initMssModule()
                 this.filePath = filePath
                 audioFile = RandomAccessFile(filePath, "r")
-                Logger.logi("Audio started playing $filePath")
+                Logger.logi("Audio started playing $filePath. minBufferSize: $minBufferSize")
                 val wav = wavFile ?: WavFile(File(filePath))
                 this.fileChanels = wav.getChannels()
                 this.fileBlockAlign = wav.getBlockAlign()
@@ -188,7 +205,8 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                             // audioTrack?.write(convertedBuffer, 0, convertedBuffer.size)
                             val floatInput = DataConverter.byteArrayToFloatArray(convertedBuffer)
                             val floatOutput = FloatArray(floatInput.size)
-                            gainModule.gainProcess(gainHandle, floatInput, floatOutput, floatOutput.size)
+                            // gainModule.gainProcess(gainHandle, floatInput, floatOutput, floatOutput.size)
+                            mssModule.mssWrapperProcess(mssHandle, floatInput, floatOutput, floatOutput.size)
                             val outputData = DataConverter.floatArrayToByteArray(floatOutput)
                             outputDumpStream?.write(outputData)
                             audioTrack?.write(outputData, 0, convertedBuffer.size)
