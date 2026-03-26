@@ -16,7 +16,8 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.panda.audioplayer.permission.PermissionManager
 import com.panda.audioplayer.utils.Logger
-import com.panda.audioplayer.utils.WavFile
+import com.panda.audioplayer.utils.AudioMetadata
+import com.panda.audioplayer.utils.MetadataReader
 import androidx.core.view.isVisible
 import android.content.Context
 import java.io.File
@@ -30,7 +31,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     private lateinit var viewInitializer: ViewInitializer
     private lateinit var permissionHandler: PermissionHandler
     private lateinit var audioManager: AudioManager
-    private lateinit var audioTrackManager: AudioTrackManager
+    private lateinit var exoPlayerManager: ExoPlayerManager
     private lateinit var effectRecyclerView: RecyclerView
     private lateinit var effectAdapter: EffectAdapter
     private lateinit var effectManager: EffectManager
@@ -39,7 +40,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     lateinit var playlistManager: PlaylistManager
     private val updateSeekBarRunnable = object : Runnable {
         override fun run() {
-            if (::audioTrackManager.isInitialized) { // Check if audioTrackManager is initialized
+            if (::exoPlayerManager.isInitialized) {
                 updateSeekBar()
             }
             handler.postDelayed(this, 1000) // Update every second
@@ -73,16 +74,15 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         // Set up listeners
         setupListeners()
 
-        // Start updating SeekBar only after audioTrackManager is initialized
+        initExoPlayerManager()
         if (playlistManager.getPlaylist().isNotEmpty()) {
             val initialFilePath = playlistManager.getPlaylist()[0]
-            val wavFile = WavFile(File(initialFilePath))
-            initializeAudioTrackManager(wavFile.getSampleRate(), wavFile.getChannels())
-            updateAudioInfo(wavFile)
+            val metadata = MetadataReader.read(File(initialFilePath))
+            updateAudioInfo(metadata)
             handler.post(updateSeekBarRunnable)
         }
 
-        effectManager = EffectManager(audioTrackManager)
+        effectManager = EffectManager(exoPlayerManager)
 
         effectAdapter = EffectAdapter(effectManager) { name, state ->
             Logger.logi("Effect $name ${if (state) "enabled" else "disabled"}")
@@ -110,9 +110,9 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
     private fun handleEffectToggle(effectName: String, enabled: Boolean) {
         when (effectName) {
-            "Gain" -> audioTrackManager.setGainEffect(enabled)
-            "Equalizer" -> audioTrackManager.setEqualizerEffect(enabled)
-            "3D Audio" -> audioTrackManager.set3DEffect(enabled)
+            "Gain" -> exoPlayerManager.setGainEffect(enabled)
+            "Equalizer" -> exoPlayerManager.setEqualizerEffect(enabled)
+            "3D Audio" -> exoPlayerManager.set3DEffect(enabled)
         }
         Logger.logi("Effect $effectName ${if (enabled) "enabled" else "disabled"}")
     }
@@ -122,9 +122,9 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         playlistManager.refreshPlaylist(files)
     }
 
-    private fun initializeAudioTrackManager(sampleRate: Int, channelConfig: Int) {
-        audioTrackManager = AudioTrackManager(sampleRate, channelConfig)
-        audioTrackManager.onPlaybackComplete = {
+    private fun initExoPlayerManager() {
+        exoPlayerManager = ExoPlayerManager(this)
+        exoPlayerManager.onPlaybackComplete = {
             runOnUiThread {
                 handlePlaybackCompletion()
             }
@@ -155,10 +155,9 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         // Set up SeekBar listener
         viewInitializer.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser && ::audioTrackManager.isInitialized) { // Check if audioTrackManager is initialized
-                    audioTrackManager.seekTo(progress.toLong())
-                    val currentPosition = seekBar.progress
-                    viewInitializer.currentTime.text = formatTime(currentPosition)
+                if (fromUser && ::exoPlayerManager.isInitialized) {
+                    exoPlayerManager.seekTo(progress.toLong())
+                    viewInitializer.currentTime.text = formatTime(progress)
                 }
             }
 
@@ -226,44 +225,31 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     private fun switchToNewAudio(filePath: String) {
-        // Stop the current audio if it's playing
-        if (::audioTrackManager.isInitialized && audioTrackManager.isPlaying) {
-            audioTrackManager.stopPlay()
+        if (::exoPlayerManager.isInitialized) {
+            exoPlayerManager.stopPlay()
         }
-
-        // Initialize the new audio track manager with the new file's sample rate
-        val wavFile = WavFile(File(filePath))
-        initializeAudioTrackManager(wavFile.getSampleRate(), wavFile.getChannels())
-
-        // Start playing the new audio from the beginning
-        audioTrackManager.startPlay(filePath, wavFile)
-
-        // Update the UI with the new audio's information
-        updateAudioInfo(wavFile)
-
-        // Update the play/pause button icon to pause
+        val metadata = MetadataReader.read(File(filePath))
+        exoPlayerManager.startPlay(filePath)
+        updateAudioInfo(metadata)
         val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
         playPauseButton.setImageResource(R.drawable.ic_pause)
-
         handler.removeCallbacks(updateSeekBarRunnable)
         handler.post(updateSeekBarRunnable)
     }
 
-    private fun updateAudioInfo(wavFile: WavFile) {
+    private fun updateAudioInfo(metadata: AudioMetadata) {
         val titleTextView = findViewById<TextView>(R.id.audio_title)
         val artistTextView = findViewById<TextView>(R.id.audio_artist)
-        val totalDuration = wavFile.getTotalDuration()
-
-        titleTextView.text = wavFile.getAudioTitle()
-        artistTextView.text = wavFile.getArtist()
-        viewInitializer.seekBar.max = totalDuration
-        viewInitializer.totalTime.text = formatTime(totalDuration)
-
+        titleTextView.text = metadata.title
+        artistTextView.text = metadata.artist
+        if (metadata.duration > 0) {
+            viewInitializer.seekBar.max = metadata.duration
+            viewInitializer.totalTime.text = formatTime(metadata.duration)
+        }
         val audioCover = findViewById<ImageView>(R.id.audio_cover)
-        val coverArt = wavFile.getCoverArt()
-        if (coverArt != null) {
+        if (metadata.coverArt != null) {
             Glide.with(this)
-                .load(coverArt)
+                .load(metadata.coverArt)
                 .placeholder(R.drawable.ic_launcher_foreground)
                 .into(audioCover)
         } else {
@@ -272,22 +258,22 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     private fun togglePlayPause() {
-        if (!::audioTrackManager.isInitialized) return // Check if audioTrackManager is initialized
+        if (!::exoPlayerManager.isInitialized) return
 
         val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
-        // val selectedFilePath = playlist[viewInitializer.playlistAdapter.getSelectedPosition()]
         val selectedFilePath = playlistManager.getPlaylist()[viewInitializer.playlistAdapter.getSelectedPosition()]
 
-        if (audioTrackManager.isPlaying) {
-            audioTrackManager.pausePlay()
+        if (exoPlayerManager.isPlaying) {
+            exoPlayerManager.pausePlay()
             playPauseButton.setImageResource(R.drawable.ic_play)
             Logger.logi("Audio paused")
         } else {
-            if (audioTrackManager.isSameAudioFile(selectedFilePath) && !audioTrackManager.isCompleted) {
-                audioTrackManager.resumePlay()
+            if (exoPlayerManager.isSameAudioFile(selectedFilePath) && !exoPlayerManager.isCompleted) {
+                exoPlayerManager.resumePlay()
                 Logger.logi("Resuming playback")
             } else {
-                audioTrackManager.startPlay(selectedFilePath)
+                exoPlayerManager.startPlay(selectedFilePath)
+                updateAudioInfo(MetadataReader.read(File(selectedFilePath)))
             }
             playPauseButton.setImageResource(R.drawable.ic_pause)
         }
@@ -322,10 +308,16 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     private fun updateSeekBar() {
-        if (::audioTrackManager.isInitialized && (audioTrackManager.isPlaying || audioTrackManager.isPaused())) {
-            val currentPosition = audioTrackManager.getCurrentPosition()
+        if (::exoPlayerManager.isInitialized && (exoPlayerManager.isPlaying || exoPlayerManager.isPaused())) {
+            val currentPosition = exoPlayerManager.getCurrentPosition()
             viewInitializer.seekBar.progress = currentPosition
             viewInitializer.currentTime.text = formatTime(currentPosition)
+            // Sync seekBar max from ExoPlayer once it becomes accurate
+            val duration = exoPlayerManager.getDuration()
+            if (duration > 0 && viewInitializer.seekBar.max != duration) {
+                viewInitializer.seekBar.max = duration
+                viewInitializer.totalTime.text = formatTime(duration)
+            }
         }
     }
 
@@ -353,6 +345,9 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(updateSeekBarRunnable)
+        if (::exoPlayerManager.isInitialized) {
+            exoPlayerManager.release()
+        }
     }
 }
 
