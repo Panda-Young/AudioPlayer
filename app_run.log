@@ -1,0 +1,73 @@
+--------- beginning of main
+--------- beginning of kernel
+--------- beginning of system
+---------------------------- PROCESS STARTED (27163) for package com.panda.audioplayer ----------------------------
+2026-03-26 12:30:29.227 27163-27163 Perf                    com.panda.audioplayer                I  Connecting to perf service.
+2026-03-26 12:30:29.232 27163-27163 GraphicsEnvironment     com.panda.audioplayer                V  ANGLE Developer option for 'com.panda.audioplayer' set to: 'default'
+2026-03-26 12:30:29.233 27163-27163 GraphicsEnvironment     com.panda.audioplayer                V  ANGLE GameManagerService for com.panda.audioplayer: false
+2026-03-26 12:30:29.233 27163-27163 GraphicsEnvironment     com.panda.audioplayer                V  Updatable production driver is not supported on the device.
+2026-03-26 12:30:29.235 27163-27163 NetworkSecurityConfig   com.panda.audioplayer                D  No Network Security Config specified, using platform default
+2026-03-26 12:30:29.235 27163-27163 NetworkSecurityConfig   com.panda.audioplayer                D  No Network Security Config specified, using platform default
+2026-03-26 12:30:29.278 27163-27163 AppCompatDelegate       com.panda.audioplayer                D  Checking for metadata for AppLocalesMetadataHolderService : Service not found
+2026-03-26 12:30:29.317 27163-27163 AudioPlayer             com.panda.audioplayer                D  MainActivity.kt:52 @onCreate                                     Start MainActivity. SDK Version: 32
+2026-03-26 12:30:29.321 27163-27163 nda.audioplaye          com.panda.audioplayer                W  Accessing hidden method Landroid/view/View;->computeFitSystemWindows(Landroid/graphics/Rect;Landroid/graphics/Rect;)Z (unsupported, reflection, allowed)
+2026-03-26 12:30:29.321 27163-27163 nda.audioplaye          com.panda.audioplayer                W  Accessing hidden method Landroid/view/ViewGroup;->makeOptionalFitsSystemWindows()V (unsupported, reflection, allowed)
+2026-03-26 12:30:29.366 27163-27163 AudioPlayer             com.panda.audioplayer                I  PermissionManager.kt:50 @checkAndRequestPermissions              READ_EXTERNAL_STORAGE permission already granted
+2026-03-26 12:30:29.368 27163-27163 AudioPlayer             com.panda.audioplayer                I  PermissionManager.kt:72 @checkAndRequestPermissions              MANAGE_EXTERNAL_STORAGE permission granted
+2026-03-26 12:30:29.368 27163-27163 AudioPlayer             com.panda.audioplayer                I  PermissionManager.kt:80 @checkAndRequestPermissions              All required permissions already granted
+2026-03-26 12:30:29.368 27163-27163 AudioPlayer             com.panda.audioplayer                I  MainActivity.kt:345 @onAllPermissionsGranted                     All permissions granted, proceeding with app functionality
+2026-03-26 12:30:29.373 27163-27163 AudioPlayer             com.panda.audioplayer                D  AudioFileManager.kt:61 @scanAllLocalFiles                        Using cached audio files
+2026-03-26 12:30:29.376 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:45 @parseWavHeader                                    Parsing WAV file path /storage/emulated/0/Music/5s.wav
+2026-03-26 12:30:29.376 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:67 @parseWavHeader                                    Parsing chunk: id=fmt , size=16
+2026-03-26 12:30:29.376 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:155 @parseFmtChunk                                    Parsed WAV header: audioFormat=1, channels=2, sampleRate=44100, bitDepth=16, blockAlign=4
+2026-03-26 12:30:29.376 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:67 @parseWavHeader                                    Parsing chunk: id=data, size=882000
+2026-03-26 12:30:29.377 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:67 @parseWavHeader                                    Parsing chunk: id=LIST, size=76
+2026-03-26 12:30:29.377 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:160 @parseListChunk                                   Parsing LIST chunk: type=INFO, totalSize=76
+2026-03-26 12:30:29.377 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:192 @parseListChunk                                   Parsing subChunk: id=ICRD, size=26, data=2025-06-05T12:58:34+08:00??
+2026-03-26 12:30:29.377 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:192 @parseListChunk                                   Parsing subChunk: id=ISFT, size=30, data=Adobe Audition 13.0 (Windows)??
+2026-03-26 12:30:29.377 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:67 @parseWavHeader                                    Parsing chunk: id=_PMX, size=5126
+2026-03-26 12:30:29.388 27163-27163 AudioPlayer             com.panda.audioplayer                I  Gain.kt:8 @<init>                                                Gain library loaded
+2026-03-26 12:30:29.398 27163-27163 AudioPlayer             com.panda.audioplayer                I  Mss.kt:8 @<init>                                                 Mss library loaded
+2026-03-26 12:30:29.458 27163-27198 AdrenoGLES-0            com.panda.audioplayer                I  QUALCOMM build                   : ee99c0bfce, Icd6d974f18
+                                                                                                    Build Date                       : 11/11/22
+                                                                                                    OpenGL ES Shader Compiler Version: EV031.36.08.11
+                                                                                                    Local Branch                     : 
+                                                                                                    Remote Branch                    : 
+                                                                                                    Remote Branch                    : 
+                                                                                                    Reconstruct Branch               : 
+2026-03-26 12:30:29.458 27163-27198 AdrenoGLES-0            com.panda.audioplayer                I  Build Config                     : S P 12.1.1 AArch64
+2026-03-26 12:30:29.458 27163-27198 AdrenoGLES-0            com.panda.audioplayer                I  Driver Path                      : /vendor/lib64/egl/libGLESv2_adreno.so
+2026-03-26 12:30:29.458 27163-27198 AdrenoGLES-0            com.panda.audioplayer                I  Driver Version                   : 0615.52
+2026-03-26 12:30:29.465 27163-27198 AdrenoGLES-0            com.panda.audioplayer                I  PFP: 0x01730155, ME: 0x00000000
+2026-03-26 12:30:30.718 27163-27176 System                  com.panda.audioplayer                W  A resource failed to call close. 
+2026-03-26 12:30:34.870 27163-27214 ProfileInstaller        com.panda.audioplayer                D  Installing profile for com.panda.audioplayer
+2026-03-26 12:37:53.665 27163-27178 OpenGLRenderer          com.panda.audioplayer                I  Davey! duration=9223231901016ms; Flags=0, FrameTimelineVsyncId=50445, IntendedVsync=140135837931999, Vsync=140135837931999, InputEventId=223262624, HandleInputStart=140135838596229, AnimationStart=140135846776177, PerformTraversalsStart=140135846780135, DrawStart=140135847079354, FrameDeadline=140135846862552, FrameInterval=140135838582427, FrameStartTime=6944444, SyncQueued=140135847774406, SyncStart=140135847884302, IssueDrawCommandsStart=140135848208104, SwapBuffers=140135849134406, FrameCompleted=9223372036854775807, DequeueBufferDuration=18594, QueueBufferDuration=1172135, GpuCompleted=9223372036854775807, SwapBuffersCompleted=140135851302583, DisplayPresentTime=0, 
+2026-03-26 12:37:55.319 27163-27163 AudioPlayer             com.panda.audioplayer                I  PlaylistManager.kt:95 @onBindViewHolder$lambda$1                 Selected file path: /storage/emulated/0/Music/wav/桥边姑娘.wav
+2026-03-26 12:37:55.322 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:45 @parseWavHeader                                    Parsing WAV file path /storage/emulated/0/Music/wav/桥边姑娘.wav
+2026-03-26 12:37:55.323 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:67 @parseWavHeader                                    Parsing chunk: id=fmt , size=16
+2026-03-26 12:37:55.323 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:155 @parseFmtChunk                                    Parsed WAV header: audioFormat=1, channels=2, sampleRate=44100, bitDepth=16, blockAlign=4
+2026-03-26 12:37:55.323 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:67 @parseWavHeader                                    Parsing chunk: id=LIST, size=110
+2026-03-26 12:37:55.324 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:160 @parseListChunk                                   Parsing LIST chunk: type=INFO, totalSize=110
+2026-03-26 12:37:55.324 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:192 @parseListChunk                                   Parsing subChunk: id=IART, size=7, data=海伦??
+2026-03-26 12:37:55.324 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:192 @parseListChunk                                   Parsing subChunk: id=IGNR, size=6, data=Blues??
+2026-03-26 12:37:55.324 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:192 @parseListChunk                                   Parsing subChunk: id=INAM, size=13, data=桥边姑娘??
+2026-03-26 12:37:55.325 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:192 @parseListChunk                                   Parsing subChunk: id=IPRD, size=13, data=桥边姑娘??
+2026-03-26 12:37:55.325 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:192 @parseListChunk                                   Parsing subChunk: id=IPRT, size=2, data=1??
+2026-03-26 12:37:55.325 27163-27163 AudioPlayer             com.panda.audioplayer                D  WavFile.kt:192 @parseListChunk                                   Parsing subChunk: id=ISFT, size=14, data=Lavf58.29.100??
+2026-03-26 12:37:55.325 27163-27163 AudioPlayer             com.panda.audioplayer                I  WavFile.kt:67 @parseWavHeader                                    Parsing chunk: id=data, size=32306088
+2026-03-26 12:37:55.329 27163-27163 AudioPlayer             com.panda.audioplayer                I  Gain.kt:8 @<init>                                                Gain library loaded
+2026-03-26 12:37:55.329 27163-27163 AudioPlayer             com.panda.audioplayer                I  Mss.kt:8 @<init>                                                 Mss library loaded
+2026-03-26 12:37:55.356 27163-27163 AudioPlayer             com.panda.audioplayer                I  AudioTrackManager.kt:72 @initGainModule                          gain module version: 0.1.2
+2026-03-26 12:37:55.356 27163-27163 AudioPlayer             com.panda.audioplayer                I  gain.c:52 @algo_init:                                            algo_init OK
+2026-03-26 12:37:55.356 27163-27163 AudioPlayer             com.panda.audioplayer                I  gain.c:96 @algo_set_param:                                       set param2: -5.000
+2026-03-26 12:37:55.357 27163-27163 AudioPlayer             com.panda.audioplayer                I  AudioTrackManager.kt:96 @initMssModule                           mss module version: 0.1.0
+2026-03-26 12:37:55.357 27163-27163 AudioPlayer             com.panda.audioplayer                I  mss_jni.cpp:29 @Java_com_panda_audioplayer_algos_Mss_mssWrapperInit: Mss::mssWrapperInit
+2026-03-26 12:37:55.458 27163-27163 MSS                     com.panda.audioplayer                I  mss_wrapper.c:88 @mss_wrapper_init: |MSS Heap buffer size is 57326.390625 kB|
+2026-03-26 12:37:55.458 27163-27163 MSS                     com.panda.audioplayer                I  mss_wrapper.c:97 @mss_wrapper_init: Got ONNX runtime version: 1.17.1
+2026-03-26 12:37:55.458 27163-27163 MSS                     com.panda.audioplayer                I  mss_wrapper.c:105 @mss_wrapper_init: Got ONNX runtime API Successfully
+2026-03-26 12:37:55.482 27163-27163 MSS                     com.panda.audioplayer                I  base.c:255 @OnnxInit: Inference Device: CPU
+2026-03-26 12:37:55.484 27163-27163 MSS                     com.panda.audioplayer                E  base.c:57 @CheckStatus: Load model from /sdcard/Download/causal_8frame_state_static_quant.onnx failed:Load model /sdcard/Download/causal_8frame_state_static_quant.onnx failed. File doesn't exist
+2026-03-26 12:37:55.528 27163-27163 BpBinder                com.panda.audioplayer                I  onLastStrongRef automatically unlinking death recipients: <uncached descriptor>
+2026-03-26 12:37:55.528 27163-27163 BpBinder                com.panda.audioplayer                I  onLastStrongRef automatically unlinking death recipients: <uncached descriptor>
+---------------------------- PROCESS ENDED (27163) for package com.panda.audioplayer ----------------------------
+2026-03-26 12:37:55.529 27163-27163 BpBinder                com.panda.audioplayer                I  onLastStrongRef automatically unlinking death recipients: <uncached descriptor>
