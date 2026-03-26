@@ -7,7 +7,6 @@ import com.panda.audioplayer.utils.Logger
 import com.panda.audioplayer.utils.WavFile
 import com.panda.audioplayer.utils.DataConverter
 import com.panda.audioplayer.algos.Gain
-import com.panda.audioplayer.algos.Mss
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -43,8 +42,6 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
     var onPlaybackComplete: (() -> Unit)? = null
     private var gainHandle: Long = 0
     private val gainModule = Gain() // instance
-    private var mssHandle: Long = 0
-    private val mssModule = Mss()
     private var inputDumpStream: FileOutputStream? = null
     private var outputDumpStream: FileOutputStream? = null
     companion object {
@@ -79,41 +76,6 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
         gainModule.gainSetParam(gainHandle, 2, param, param.size)
     }
 
-    private fun initMssModule() {
-        val mssVersion = ByteArray(1024)
-        if (mssModule.getMssWrapperVersion(mssVersion) != 0) {
-            Logger.logf("Failed to get mssModule version")
-            return
-        }
-
-        var endIndex = 0
-        while (endIndex < mssVersion.size && mssVersion[endIndex].toInt() != 0) {
-            endIndex++
-        }
-        val validVersionBytes = mssVersion.copyOfRange(0, endIndex)
-        val mssVersionString = String(validVersionBytes)
-
-        Logger.logi("mss module version: $mssVersionString")
-        mssHandle = mssModule.mssWrapperInit()
-        if (mssHandle == 0L) {
-            Logger.loge("failed to initialize mss module")
-            return
-        }
-
-        val enableValue = ByteBuffer.allocate(4).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            putInt(1)
-        }.array()
-        val disableValue = ByteBuffer.allocate(4).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            putInt(0)
-        }.array()
-        mssModule.mssWrapperSetParam(mssHandle, 1, enableValue, enableValue.size)
-        mssModule.mssWrapperSetParam(mssHandle, 2, disableValue, disableValue.size)
-        mssModule.mssWrapperSetParam(mssHandle, 3, disableValue, disableValue.size)
-        mssModule.mssWrapperSetParam(mssHandle, 4, disableValue, disableValue.size)
-    }
-
     private fun initializeAudioTrack() {
         audioTrack = AudioTrack.Builder()
             .setAudioAttributes(
@@ -140,7 +102,6 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
             } else {
                 stopPlay()
                 initGainModule()
-                initMssModule()
                 this.filePath = filePath
                 audioFile = RandomAccessFile(filePath, "r")
                 Logger.logi("Audio started playing $filePath. minBufferSize: $minBufferSize")
@@ -202,14 +163,9 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
                                 }
                                 else -> buffer // use raw data
                             }
-                            // audioTrack?.write(convertedBuffer, 0, convertedBuffer.size)
-                            val floatInput = DataConverter.byteArrayToFloatArray(convertedBuffer)
-                            val floatOutput = FloatArray(floatInput.size)
-                            // gainModule.gainProcess(gainHandle, floatInput, floatOutput, floatOutput.size)
-                            mssModule.mssWrapperProcess(mssHandle, floatInput, floatOutput, floatOutput.size)
-                            val outputData = DataConverter.floatArrayToByteArray(floatOutput)
+                            val outputData = convertedBuffer.copyOf(read.coerceAtMost(convertedBuffer.size))
                             outputDumpStream?.write(outputData)
-                            audioTrack?.write(outputData, 0, convertedBuffer.size)
+                            audioTrack?.write(outputData, 0, outputData.size)
                         }
 
                         if (isPaused) {
@@ -241,10 +197,6 @@ class AudioTrackManager(private val sampleRate: Int, private val channelConfig: 
         if (gainHandle != 0L) {
             gainModule.gainDeinit(gainHandle)
         }
-        if (mssHandle != 0L) {
-            mssModule.mssWrapperDeinit(mssHandle)
-        }
-
         audioTrack?.stop()
         audioTrack?.flush()
         try {
