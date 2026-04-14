@@ -1,43 +1,55 @@
 package com.panda.audioplayer
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.panda.audioplayer.permission.PermissionManager
 import com.panda.audioplayer.utils.Logger
 import com.panda.audioplayer.utils.AudioMetadata
 import com.panda.audioplayer.utils.MetadataReader
 import androidx.core.view.isVisible
-import android.content.Context
-import java.io.File
 import com.bumptech.glide.Glide
+import java.io.File
+import java.util.Locale
+import android.widget.Toast
 
 class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     companion object {
-        enum class VisibleView { EFFECTS, PLAYLIST, NONE }
+        enum class VisibleView { PLAYLIST, NONE }
     }
 
     private lateinit var viewInitializer: ViewInitializer
     private lateinit var permissionHandler: PermissionHandler
     private lateinit var audioManager: AudioManager
     private lateinit var exoPlayerManager: ExoPlayerManager
-    private lateinit var effectRecyclerView: RecyclerView
-    private lateinit var effectAdapter: EffectAdapter
-    private lateinit var effectManager: EffectManager
     private var currentVisibleView: VisibleView = VisibleView.NONE
     private val handler = Handler(Looper.getMainLooper())
     lateinit var playlistManager: PlaylistManager
+    private var ignorePlaybackCompletion = false
+
+    private val pickAudioLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNullOrEmpty()) return@registerForActivityResult
+        persistUriPermissions(uris)
+        audioManager.importSafUris(uris)
+        loadAudioFiles()
+    }
+
     private val updateSeekBarRunnable = object : Runnable {
         override fun run() {
             if (::exoPlayerManager.isInitialized) {
@@ -62,70 +74,55 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         permissionHandler = PermissionHandler(this)
         audioManager = AudioManager(this)
 
-        // Initialize permissions
-        permissionHandler.initializePermissions()
-
-        // Initialize audio manager
         audioManager.initializeAudioManager()
-
-        // Load audio files
+        permissionHandler.initializePermissions()
         loadAudioFiles()
-
-        // Set up listeners
         setupListeners()
 
         initExoPlayerManager()
-        if (playlistManager.getPlaylist().isNotEmpty()) {
-            val initialFilePath = playlistManager.getPlaylist()[0]
-            val metadata = MetadataReader.read(File(initialFilePath))
-            updateAudioInfo(metadata)
-            handler.post(updateSeekBarRunnable)
-        }
-
-        effectManager = EffectManager(exoPlayerManager)
-
-        effectAdapter = EffectAdapter(effectManager) { name, state ->
-            Logger.logi("Effect $name ${if (state) "enabled" else "disabled"}")
-        }
-
-        // Initialize effect recycler view
-        effectRecyclerView = findViewById(R.id.effect_recycler_view)
-        effectRecyclerView.layoutManager = LinearLayoutManager(this)
-        effectRecyclerView.adapter = effectAdapter
+        restoreLastPlaybackIfAvailable()
 
         val effectButton: ImageView = findViewById(R.id.effect_button)
         effectButton.setOnClickListener {
-            if (currentVisibleView == VisibleView.EFFECTS) {
-                effectRecyclerView.visibility = View.GONE
-                currentVisibleView = VisibleView.NONE
-            } else {
-                if (viewInitializer.playlistRecyclerView.isVisible) {
-                    togglePlaylistVisibility()
-                }
-                effectRecyclerView.visibility = View.VISIBLE
-                currentVisibleView = VisibleView.EFFECTS
+            startActivity(Intent(this, EffectLabActivity::class.java))
+        }
+
+        handler.post(updateSeekBarRunnable)
+    }
+
+    private fun persistUriPermissions(uris: List<Uri>) {
+        for (uri in uris) {
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: Exception) {
+                Logger.logw("Persist permission failed for $uri: ${e.message}")
             }
         }
     }
 
-    private fun handleEffectToggle(effectName: String, enabled: Boolean) {
-        when (effectName) {
-            "Gain" -> exoPlayerManager.setGainEffect(enabled)
-            "Equalizer" -> exoPlayerManager.setEqualizerEffect(enabled)
-            "3D Audio" -> exoPlayerManager.set3DEffect(enabled)
-        }
-        Logger.logi("Effect $effectName ${if (enabled) "enabled" else "disabled"}")
-    }
-
     fun loadAudioFiles() {
-        val files = audioManager.getAudioFileNames()
-        playlistManager.refreshPlaylist(files)
+        val sources = audioManager.getAudioSources()
+        playlistManager.refreshPlaylist(sources)
     }
 
     private fun initExoPlayerManager() {
-        exoPlayerManager = ExoPlayerManager(this)
+        exoPlayerManager = PlaybackEngine.getManager(this)
         exoPlayerManager.onPlaybackComplete = {
             runOnUiThread {
+                if (ignorePlaybackCompletion) {
+                    Logger.logd("Completion arrived during manual switch; run smart check")
+                    handler.postDelayed({
+                        val progressed = exoPlayerManager.getCurrentPosition() > 300
+                        if (progressed || exoPlayerManager.isPlaying) {
+                            Logger.logd("Likely stale completion callback, keep current track")
+                        } else {
+                            Logger.logw("Track made no progress after switch; fallback to next track")
+                            handlePlaybackCompletion()
+                        }
+                        ignorePlaybackCompletion = false
+                    }, 250)
+                    return@runOnUiThread
+                }
                 handlePlaybackCompletion()
             }
         }
@@ -136,6 +133,10 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
             audioManager.refreshAudioFiles()
             loadAudioFiles()
             Logger.logi("Rescanned audio files")
+        }
+
+        viewInitializer.importButton.setOnClickListener {
+            pickAudioLauncher.launch(arrayOf("audio/*"))
         }
 
         viewInitializer.closeButton.setOnClickListener {
@@ -167,8 +168,8 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         })
 
         // Set up playlist item click listener
-        viewInitializer.playlistAdapter.setOnItemClickListener { filePath ->
-            switchToNewAudio(filePath)
+        viewInitializer.playlistAdapter.setOnItemClickListener { source ->
+            switchToNewAudio(source)
         }
 
         // Set up loop button listener
@@ -188,6 +189,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     private fun playPrevious() {
+        if (playlistManager.getPlaylist().isEmpty()) return
         val currentPosition = viewInitializer.playlistAdapter.getSelectedPosition()
         val newPosition = playlistManager.getButtonPreviousPosition(currentPosition)
         viewInitializer.playlistAdapter.setSelectedPosition(newPosition)
@@ -195,6 +197,7 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
     }
 
     private fun playNext() {
+        if (playlistManager.getPlaylist().isEmpty()) return
         val currentPosition = viewInitializer.playlistAdapter.getSelectedPosition()
         val newPosition = playlistManager.getButtonNextPosition(currentPosition)
         viewInitializer.playlistAdapter.setSelectedPosition(newPosition)
@@ -218,23 +221,28 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
     // Handle playback completion based on the current loop mode
     private fun handlePlaybackCompletion() {
+        if (playlistManager.getPlaylist().isEmpty()) return
         val currentPosition = viewInitializer.playlistAdapter.getSelectedPosition()
         val newPosition = playlistManager.getAutoNextPosition(currentPosition)
         viewInitializer.playlistAdapter.setSelectedPosition(newPosition)
         switchToNewAudio(playlistManager.getPlaylist()[newPosition])
     }
 
-    private fun switchToNewAudio(filePath: String) {
-        if (::exoPlayerManager.isInitialized) {
-            exoPlayerManager.stopPlay()
+    private fun switchToNewAudio(source: String, autoPlay: Boolean = true, seekTo: Long = 0L) {
+        ignorePlaybackCompletion = true
+        val metadata = MetadataReader.read(this, source)
+        exoPlayerManager.startPlay(source, autoPlay)
+        if (seekTo > 0) {
+            exoPlayerManager.seekTo(seekTo)
         }
-        val metadata = MetadataReader.read(File(filePath))
-        exoPlayerManager.startPlay(filePath)
         updateAudioInfo(metadata)
         val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
-        playPauseButton.setImageResource(R.drawable.ic_pause)
-        handler.removeCallbacks(updateSeekBarRunnable)
-        handler.post(updateSeekBarRunnable)
+        playPauseButton.setImageResource(if (autoPlay) R.drawable.ic_pause else R.drawable.ic_play)
+        handler.postDelayed({
+            if (ignorePlaybackCompletion) {
+                ignorePlaybackCompletion = false
+            }
+        }, 600)
     }
 
     private fun updateAudioInfo(metadata: AudioMetadata) {
@@ -257,23 +265,46 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
         }
     }
 
+    private fun restoreLastPlaybackIfAvailable() {
+        val snapshot = exoPlayerManager.restorePlaybackState() ?: run {
+            if (playlistManager.getPlaylist().isNotEmpty()) {
+                val first = playlistManager.getPlaylist().first()
+                updateAudioInfo(MetadataReader.read(this, first))
+                viewInitializer.playlistAdapter.setSelectedPosition(0)
+            }
+            return
+        }
+
+        var playlist = playlistManager.getPlaylist().toMutableList()
+        if (!playlist.contains(snapshot.source)) {
+            playlist.add(0, snapshot.source)
+            playlistManager.refreshPlaylist(playlist)
+        }
+
+        val index = playlistManager.getPlaylist().indexOf(snapshot.source).coerceAtLeast(0)
+        viewInitializer.playlistAdapter.setSelectedPosition(index)
+        // Product requirement: app launch restores track + position, but starts in paused state.
+        switchToNewAudio(snapshot.source, false, snapshot.position)
+    }
+
     private fun togglePlayPause() {
         if (!::exoPlayerManager.isInitialized) return
+        if (playlistManager.getPlaylist().isEmpty()) return
 
         val playPauseButton = findViewById<ImageView>(R.id.play_pause_button)
-        val selectedFilePath = playlistManager.getPlaylist()[viewInitializer.playlistAdapter.getSelectedPosition()]
+        val selectedSource = playlistManager.getPlaylist()[viewInitializer.playlistAdapter.getSelectedPosition()]
 
         if (exoPlayerManager.isPlaying) {
             exoPlayerManager.pausePlay()
             playPauseButton.setImageResource(R.drawable.ic_play)
             Logger.logi("Audio paused")
         } else {
-            if (exoPlayerManager.isSameAudioFile(selectedFilePath) && !exoPlayerManager.isCompleted) {
+            if (exoPlayerManager.isSameAudioFile(selectedSource) && !exoPlayerManager.isCompleted) {
                 exoPlayerManager.resumePlay()
                 Logger.logi("Resuming playback")
             } else {
-                exoPlayerManager.startPlay(selectedFilePath)
-                updateAudioInfo(MetadataReader.read(File(selectedFilePath)))
+                exoPlayerManager.startPlay(selectedSource)
+                updateAudioInfo(MetadataReader.read(this, selectedSource))
             }
             playPauseButton.setImageResource(R.drawable.ic_pause)
         }
@@ -290,11 +321,6 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
                     currentVisibleView = VisibleView.NONE
                 }
         } else {
-            if (effectRecyclerView.isVisible) {
-                effectRecyclerView.visibility = View.GONE
-                currentVisibleView = VisibleView.NONE
-            }
-
             viewInitializer.playlistRecyclerView.layoutParams.height =
                 resources.getDimensionPixelSize(R.dimen.playlist_height)
             viewInitializer.playlistRecyclerView.alpha = 0f
@@ -335,18 +361,24 @@ class MainActivity : AppCompatActivity(), PermissionManager.PermissionCallback {
 
     override fun onAllPermissionsGranted() {
         Logger.logi("All permissions granted, proceeding with app functionality")
+        loadAudioFiles()
     }
 
     override fun onPermissionsDenied() {
-        Logger.loge("Permissions denied, exiting the app")
-        finish()
+        Logger.logw("Permissions denied, continue with SAF import mode")
+        Toast.makeText(this, "Storage permission denied. You can still import audio via SAF.", Toast.LENGTH_LONG).show()
+        loadAudioFiles()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(updateSeekBarRunnable)
+    }
+
+    override fun onStop() {
+        super.onStop()
         if (::exoPlayerManager.isInitialized) {
-            exoPlayerManager.release()
+            exoPlayerManager.persistPlaybackState(exoPlayerManager.isPlaying)
         }
     }
 }
@@ -359,6 +391,7 @@ class ViewInitializer(private val activity: MainActivity) {
     lateinit var currentTime: TextView
     lateinit var totalTime: TextView
     lateinit var rescanButton: TextView
+    lateinit var importButton: TextView
     lateinit var closeButton: TextView
     lateinit var playlistControlArea: ConstraintLayout
 
@@ -369,19 +402,14 @@ class ViewInitializer(private val activity: MainActivity) {
         currentTime = activity.findViewById(R.id.current_time)
         totalTime = activity.findViewById(R.id.total_time)
         rescanButton = activity.findViewById(R.id.rescanButton)
+        importButton = activity.findViewById(R.id.importButton)
         closeButton = activity.findViewById(R.id.closeButton)
         playlistControlArea = activity.findViewById(R.id.playlist_control_area)
     }
 
     fun initializeRecyclerView(initialList: MutableList<String>) {
         playlistRecyclerView.layoutManager = LinearLayoutManager(activity)
-        playlistAdapter = PlaylistAdapter(initialList) { fileName ->
-            (activity as? MainActivity)?.playlistManager?.apply {
-                val newList = getPlaylist().toMutableList().apply { remove(fileName) }
-                refreshPlaylist(newList)
-                playlistAdapter.removeItem(fileName)
-            }
-        }
+        playlistAdapter = PlaylistAdapter(initialList)
         playlistRecyclerView.adapter = playlistAdapter
     }
 }
@@ -399,18 +427,77 @@ class PermissionHandler(private val activity: MainActivity) {
 
 class AudioManager(private val context: Context) {
 
+    private val safPrefs = context.getSharedPreferences("saf_audio_sources", Context.MODE_PRIVATE)
+    private val keySafSources = "saf_sources"
     private lateinit var audioFileManager: AudioFileManager
 
     fun initializeAudioManager() {
-        audioFileManager = AudioFileManager(context.contentResolver, context)
+        audioFileManager = AudioFileManager(context.contentResolver)
     }
 
-    fun getAudioFileNames(): List<String> {
+    fun getAudioSources(): List<String> {
+        ensureAudioManagerInitialized()
         val audioFiles = audioFileManager.scanAllLocalFiles()
-        return audioFiles.map { it.absolutePath }
+        val local = audioFiles.map { it.absolutePath }
+        val saf = safPrefs.getStringSet(keySafSources, emptySet())?.toList() ?: emptyList()
+
+        val all = (local + saf)
+            .distinct()
+            .filter { isSourceReadable(it) }
+            .sortedBy { displayLabel(it).lowercase(Locale.getDefault()) }
+
+        Logger.logd("Audio sources summary: local=${local.size}, saf=${saf.size}, visible=${all.size}")
+
+        cleanupInvalidSaf(all)
+        return all
     }
 
     fun refreshAudioFiles() {
+        ensureAudioManagerInitialized()
         audioFileManager.refreshAudioFiles()
+        Logger.logi("Audio files refreshed")
+    }
+
+    fun importSafUris(uris: List<Uri>) {
+        val old = safPrefs.getStringSet(keySafSources, emptySet())?.toMutableSet() ?: mutableSetOf()
+        uris.forEach { old.add(it.toString()) }
+        safPrefs.edit().putStringSet(keySafSources, old).apply()
+        Logger.logi("Imported ${uris.size} audio URIs via SAF")
+    }
+
+    private fun isSourceReadable(source: String): Boolean {
+        return try {
+            if (source.startsWith("content://")) {
+                context.contentResolver.openAssetFileDescriptor(Uri.parse(source), "r")?.use { true } ?: false
+            } else {
+                File(source).exists()
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun displayLabel(source: String): String {
+        return if (source.startsWith("content://")) {
+            Uri.parse(source).lastPathSegment ?: source
+        } else {
+            File(source).nameWithoutExtension
+        }
+    }
+
+    private fun cleanupInvalidSaf(validSources: List<String>) {
+        val saf = safPrefs.getStringSet(keySafSources, emptySet())?.toMutableSet() ?: mutableSetOf()
+        val validSet = validSources.toSet()
+        val originalSize = saf.size
+        saf.removeIf { it !in validSet }
+        if (saf.size != originalSize) {
+            safPrefs.edit().putStringSet(keySafSources, saf).apply()
+        }
+    }
+
+    private fun ensureAudioManagerInitialized() {
+        if (!::audioFileManager.isInitialized) {
+            initializeAudioManager()
+        }
     }
 }

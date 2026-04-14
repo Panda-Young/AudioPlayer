@@ -1,11 +1,12 @@
 package com.panda.audioplayer
 
 import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -67,8 +68,7 @@ class PlaylistManager(
 }
 
 class PlaylistAdapter(
-    private var playlist: MutableList<String>,
-    private val onRemoveClickListener: (String) -> Unit
+    private var playlist: MutableList<String>
 ) : RecyclerView.Adapter<PlaylistAdapter.PlaylistViewHolder>() {
 
     private var onItemClickListener: ((String) -> Unit)? = null
@@ -76,7 +76,7 @@ class PlaylistAdapter(
 
     class PlaylistViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val audioFileName: TextView = itemView.findViewById(R.id.audioFileName)
-        val removeIcon: ImageView = itemView.findViewById(R.id.removeIcon)
+        val audioSourceInfo: TextView = itemView.findViewById(R.id.audioSourceInfo)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlaylistViewHolder {
@@ -85,15 +85,18 @@ class PlaylistAdapter(
     }
 
     override fun onBindViewHolder(holder: PlaylistViewHolder, position: Int) {
-        val audioFilePath = playlist[position]
-        val fileName = File(audioFilePath).name
-        holder.audioFileName.text = fileName
-        holder.removeIcon.setOnClickListener {
-            onRemoveClickListener(audioFilePath)
+        val audioSource = playlist[position]
+        val fileName = resolveDisplayName(holder.itemView.context, audioSource)
+        val sourceInfo = if (audioSource.startsWith("content://")) {
+            "Imported via SAF"
+        } else {
+            "Local file"
         }
+        holder.audioFileName.text = fileName
+        holder.audioSourceInfo.text = sourceInfo
         holder.itemView.setOnClickListener {
-            Logger.logi("Selected file path: $audioFilePath")
-            onItemClickListener?.invoke(audioFilePath)
+            Logger.logi("Selected source: $audioSource")
+            onItemClickListener?.invoke(audioSource)
             setSelectedPosition(position)
         }
 
@@ -108,6 +111,25 @@ class PlaylistAdapter(
         }
     }
 
+    private fun resolveDisplayName(context: Context, audioSource: String): String {
+        if (!audioSource.startsWith("content://")) {
+            return File(audioSource).nameWithoutExtension
+        }
+        return try {
+            val uri = Uri.parse(audioSource)
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0 && cursor.moveToFirst()) {
+                    cursor.getString(idx) ?: (uri.lastPathSegment ?: "Unknown")
+                } else {
+                    uri.lastPathSegment ?: "Unknown"
+                }
+            } ?: (uri.lastPathSegment ?: "Unknown")
+        } catch (e: Exception) {
+            Uri.parse(audioSource).lastPathSegment ?: "Unknown"
+        }
+    }
+
     // Helper function to resolve theme attribute colors
     private fun resolveColorAttribute(context: Context, attr: Int): Int {
         val typedValue = TypedValue()
@@ -117,14 +139,6 @@ class PlaylistAdapter(
 
     override fun getItemCount(): Int {
         return playlist.size
-    }
-
-    fun removeItem(filePath: String) {
-        val index = playlist.indexOf(filePath)
-        if (index != -1) {
-            playlist.removeAt(index)
-            notifyItemRemoved(index)
-        }
     }
 
     fun setOnItemClickListener(listener: (String) -> Unit) {

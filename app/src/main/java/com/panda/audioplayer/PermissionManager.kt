@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.provider.Settings
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
@@ -33,7 +32,6 @@ class PermissionManager(private val activity: Activity) {
     fun checkAndRequestPermissions() {
         val permissionsToRequest = mutableListOf<String>()
 
-        // Check for READ_MEDIA_AUDIO permission on Android 13 (Tiramisu) and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(Manifest.permission.READ_MEDIA_AUDIO)
@@ -42,34 +40,11 @@ class PermissionManager(private val activity: Activity) {
                 Logger.logi("READ_MEDIA_AUDIO permission already granted")
             }
         } else {
-            // Check for READ_EXTERNAL_STORAGE permission on older versions
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
                 Logger.loge("READ_EXTERNAL_STORAGE permission not granted, requesting permission")
             } else {
                 Logger.logi("READ_EXTERNAL_STORAGE permission already granted")
-            }
-        }
-
-        // Check for WRITE_EXTERNAL_STORAGE permission on older versions before Android 10 (Q)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                Logger.loge("WRITE_EXTERNAL_STORAGE permission not granted, requesting permission")
-            } else {
-                Logger.logi("WRITE_EXTERNAL_STORAGE permission already granted")
-            }
-        }
-
-        // Check for MANAGE_EXTERNAL_STORAGE permission on Android 11 (R) and above
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                Logger.loge("MANAGE_EXTERNAL_STORAGE permission not granted, redirecting to settings")
-                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                intent.data = Uri.parse("package:${activity.packageName}")
-                activity.startActivity(intent)
-            } else {
-                Logger.logi("MANAGE_EXTERNAL_STORAGE permission granted")
             }
         }
 
@@ -107,17 +82,15 @@ class PermissionManager(private val activity: Activity) {
 
     private fun showPermissionDeniedDialog() {
         AlertDialog.Builder(activity)
-            .setTitle("Permissions Required")
-            .setMessage("This app requires permissions to access audio files. Please grant the permissions to continue.")
-            .setPositiveButton("OK") { _, _ ->
-                // Open app settings to allow the user to manually grant permissions
+            .setTitle("Storage Permission Recommended")
+            .setMessage("You can continue with SAF imported files even without storage permission. Granting permission enables local auto-scan.")
+            .setPositiveButton("Go to Settings") { _, _ ->
                 openAppSettings()
             }
-            .setNegativeButton("Exit") { _, _ ->
-                // Exit the app if the user refuses to grant permissions
+            .setNegativeButton("Continue with Import Only") { _, _ ->
                 callback?.onPermissionsDenied()
             }
-            .setCancelable(false) // Prevent dismissing the dialog by clicking outside
+            .setCancelable(false)
             .show()
     }
 

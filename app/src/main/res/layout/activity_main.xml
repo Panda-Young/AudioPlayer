@@ -199,6 +199,21 @@
             app:layout_constraintBottom_toBottomOf="parent" />
 
         <TextView
+            android:id="@+id/importButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Import"
+            android:textSize="14sp"
+            android:padding="4dp"
+            android:background="?attr/playlist_background"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintStart_toEndOf="@id/rescanButton"
+            app:layout_constraintEnd_toStartOf="@id/closeButton"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <TextView
             android:id="@+id/closeButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -212,15 +227,5 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/effect_recycler_view"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:visibility="gone"
-        app:layout_constraintWidth_percent="0.75"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/top_info_area"
-        app:layout_constraintBottom_toTopOf="@id/bottom_control_area"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
