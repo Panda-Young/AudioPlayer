@@ -16,3 +16,4 @@
 local.properties
 .vscode
 .lingma
+*.code-workspace
